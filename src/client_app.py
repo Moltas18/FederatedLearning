@@ -4,9 +4,8 @@ from collections import OrderedDict
 from typing import List
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 
-
-# How do we inlcude epochs???????
 def set_parameters(net, parameters: List[np.ndarray]):
         params_dict = zip(net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
@@ -51,57 +50,52 @@ def test(net, dataloader, device, criterion):
     accuracy = correct / total
     return loss, accuracy
 
-# Define Flower Client and client_fn
 class FlowerClient(NumPyClient):
     
     def __init__(
         self,
-        net,
-        trainloader,
-        valloader,
-        epochs: int = 1,
-        device: str = "cuda" if torch.cuda.is_available() else "cpu",
-        criterion=None,
-        optim_method=None,
-    ):
+        net : torch.nn.Module,
+        trainloader: DataLoader,
+        valloader: DataLoader,
+        epochs: int,
+        device: str,
+        criterion: torch.nn.modules.loss._Loss,
+        optimizer: torch.optim.Optimizer
+    ) -> None:
+        
         # Parameters needed from flwr
-        self.net = net
-        self.trainloader = trainloader
-        self.valloader = valloader
+        self._net = net
+        self._trainloader = trainloader
+        self._valloader = valloader
 
         # Parameters used in project
-        self.epochs = epochs
-        self.device = device
-
-        # Ensure criterion is properly initialized
-        self.criterion = criterion if criterion else torch.nn.CrossEntropyLoss()
-
-        # Ensure optimizer is properly initialized
-        self.optim_method = optim_method if optim_method else torch.optim.Adam
-        self.optimizer = self.optim_method(self.net.parameters())
+        self._epochs = epochs
+        self._device = device
+        self._criterion = criterion 
+        self._optimizer = optimizer
 
         # Move model to correct device
-        self.net.to(self.device)
+        self._net.to(self._device)
 
     def get_parameters(self, config):
-        return get_parameters(self.net)
+        return get_parameters(self._net)
 
     def fit(self, parameters, config):
         ''' Function utilized by the server'''
-        set_parameters(self.net, parameters)
-        train(net=self.net,
-              dataloader=self.trainloader,
-              epochs=self.epochs,
-              device=self.device,
-              optimizer=self.optimizer,
-              criterion=self.criterion)
-        return get_parameters(self.net), len(self.trainloader), {}
+        set_parameters(self._net, parameters)
+        train(net=self._net,
+              dataloader=self._trainloader,
+              epochs=self._epochs,
+              device=self._device,
+              optimizer=self._optimizer,
+              criterion=self._criterion)
+        return get_parameters(self._net), len(self._trainloader), {}
 
     def evaluate(self, parameters, config):
         ''' Function utilized by the server'''
-        set_parameters(self.net, parameters)
-        loss, accuracy = test(net=self.net,
-                              dataloader=self.valloader,
-                              device=self.device,
-                              criterion=self.criterion)
-        return float(loss), len(self.valloader), {"accuracy": float(accuracy)}
+        set_parameters(self._net, parameters)
+        loss, accuracy = test(net=self._net,
+                              dataloader=self._valloader,
+                              device=self._device,
+                              criterion=self._criterion)
+        return float(loss), len(self._valloader), {"accuracy": float(accuracy)}

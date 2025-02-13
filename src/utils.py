@@ -3,6 +3,11 @@ import torch
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from flwr_datasets import FederatedDataset
+from flwr.common import Metrics
+import yaml
+from typing import List, Tuple
+from time import time 
+
 
 def apply_transforms(batch):
     # Instead of passing transforms to CIFAR10(..., transform=transform)
@@ -54,3 +59,26 @@ def plot_image_samples(images: torch.Tensor) -> None:
     fig.tight_layout()
     plt.show()
         
+def load_config(config_path="config/template.yaml"):
+        with open(config_path, "r") as file:
+            config = yaml.safe_load(file)
+        return config
+
+def timer(func): 
+    # This function shows the execution time of  
+    # the function object passed 
+    def wrap_func(*args, **kwargs): 
+        t1 = time() 
+        result = func(*args, **kwargs) 
+        t2 = time() 
+        print(f'Function {func.__name__!r} executed in {(t2-t1):.4f}s') 
+        return result 
+    return wrap_func
+
+def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+    # Multiply accuracy of each client by number of examples used
+    accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
+    examples = [num_examples for num_examples, _ in metrics]
+
+    # Aggregate and return custom metric (weighted average)
+    return {"accuracy": sum(accuracies) / sum(examples)}

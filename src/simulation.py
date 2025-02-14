@@ -15,22 +15,22 @@ from flwr_datasets.partitioner import Partitioner
 
 from src.utils import load_datasets, timer
 from src.client_app import FlowerClient, get_parameters, set_parameters
-
+from Data.data import Data
 class Simulation:
     
     def __init__(self,
                  net: torch.nn.Module,
+                 data: Data, 
                  num_clients: int = 10,
                  num_rounds: int = 5,
                  epochs: int = 1,
-                 batch_size: int = 32,
                  device: str = 'cuda',
                  num_cpus: int = 1,
                  num_gpus: int = 1,
                  strategy: Strategy = FedAvg(),
                  criterion = None,
                  optim_method = None,
-                 partitioner: Union[int, Partitioner]=10
+                 partitioner: Union[int, Partitioner]=10,
                  ) -> None:
         
         # Model
@@ -48,7 +48,6 @@ class Simulation:
 
         # Training parameters
         self._epochs = epochs
-        self._batch_size = batch_size
 
         # Simulation parameters
         self._num_clients = num_clients
@@ -67,7 +66,10 @@ class Simulation:
         # Controlling functions
         self.check_hardware(self._device)
         self.check_strategy(self._strategy, self._num_clients)
-    
+        
+        # Save data to class
+        self._data = data
+
     def reset_net(self) -> None:
         # Reset the network parameters
         set_parameters(self._net, self._orgininal_parameters)  # Ensure this updates in-place
@@ -87,8 +89,8 @@ class Simulation:
             # Load model
             net = self._net.to(self._device)
             partition_id = context.node_config["partition-id"]
-            trainloader, valloader, _ = load_datasets(partition_id=partition_id, batch_size=self._batch_size, partitioner=self.partitioner)
-
+            trainloader, valloader, _ = self._data.load_datasets(partition_id=partition_id)
+            
             return FlowerClient(net,
                                 trainloader,
                                 valloader,
@@ -165,14 +167,6 @@ class Simulation:
     @epochs.setter
     def epochs(self, value: int) -> None:
         self._epochs = value
-
-    @property
-    def batch_size(self) -> int:
-        return self._batch_size
-
-    @batch_size.setter
-    def batch_size(self, value: int) -> None:
-        self._batch_size = value
 
     @property
     def num_clients(self) -> int:

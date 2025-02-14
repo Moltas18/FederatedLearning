@@ -16,10 +16,15 @@ if __name__ == '__main__':
     from src.simulation import Simulation
     from src.models.models import Net
     from src.utils import weighted_average
+    from Data.data import Data
 
     # Configurations
     num_clients = 2
-    num_rounds = 5
+    num_rounds = 3
+    batch_size = "full"
+    test_size = 0.2
+    seed = 42
+    partitioner = num_clients
 
     # Create FedAvg strategy
     strategy = FedAvg(
@@ -31,22 +36,18 @@ if __name__ == '__main__':
         evaluate_metrics_aggregation_fn=weighted_average
     )
 
-    partitioner = DirichletPartitioner(
-            num_partitions=num_clients,
-            partition_by="label",
-            alpha=1,
-            seed=42,
-            min_partition_size=0,
-        )
+    data = Data(batch_size=batch_size, partitioner=partitioner, seed=seed, test_size=test_size)
 
     sim = Simulation(net=Net(),
                      num_clients=num_clients,
                      strategy=strategy,
                      num_rounds=num_rounds,
-                     partitioner=partitioner
+                     partitioner=partitioner,
+                     data=data
                      )
 
     sim.run_simulation()
+
 
 
     

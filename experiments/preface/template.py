@@ -4,6 +4,7 @@ This file is the template upon which simulations can be build
 import sys
 import os
 from flwr.server.strategy import FedAvg
+from flwr_datasets.partitioner import DirichletPartitioner
 
 
 if __name__ == '__main__':
@@ -28,10 +29,19 @@ if __name__ == '__main__':
         evaluate_metrics_aggregation_fn=weighted_average
     )
 
+    partitioner = DirichletPartitioner(
+            num_partitions=num_clients,
+            partition_by="label",
+            alpha=1,
+            seed=42,
+            min_partition_size=0,
+        )
+
     sim = Simulation(net=Net(),
                      num_clients=num_clients,
                      strategy=strategy,
                      num_rounds=num_rounds,
+                     partitioner=partitioner
                      )
 
     sim.run_simulation()

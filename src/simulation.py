@@ -4,9 +4,7 @@ This file is the template upon which simulations can be build
 from typing import Type
 
 import torch
-
-from datasets.utils.logging import disable_progress_bar
-
+import numpy as np
 import flwr
 from flwr.client import Client, ClientApp
 from flwr.common import Context
@@ -15,8 +13,7 @@ from flwr.server.strategy import Strategy, FedAvg
 from flwr.simulation import run_simulation
 
 from src.utils import load_datasets, timer
-from src.client_app import FlowerClient
-from src.models.models import Net
+from src.client_app import FlowerClient, get_parameters, set_parameters
 
 class Simulation:
     
@@ -37,12 +34,15 @@ class Simulation:
         # Model
         self._net = net
 
+        # We save the original parameters if needed later
+        self._orgininal_parameters = [np.copy(param) for param in get_parameters(self._net)]
+
         # Ensure criterion is properly initialized
         self._criterion = criterion if criterion else torch.nn.CrossEntropyLoss()
 
         # Ensure optimizer is properly initialized
-        optim_method = optim_method if optim_method else torch.optim.Adam
-        self._optimizer = optim_method(self._net.parameters())
+        self._optim_method = optim_method if optim_method else torch.optim.Adam
+        self._optimizer = self._optim_method(self._net.parameters())
 
         # Training parameters
         self._epochs = epochs
@@ -65,18 +65,13 @@ class Simulation:
         self.check_hardware(self._device)
         self.check_strategy(self._strategy, self._num_clients)
     
-    @staticmethod
-    def check_hardware(device: str) -> None:
-        prompt = f'Using device: {device}\nDevice name: {torch.cuda.get_device_name(device)}\nFlower {flwr.__version__} / PyTorch {torch.__version__}'
-        print(prompt)
+    def reset_net(self) -> None:
+        # Reset the network parameters
+        set_parameters(self._net, self._orgininal_parameters)  # Ensure this updates in-place
 
-    @staticmethod
-    def check_strategy(strategy: Strategy, num_clients: int) -> None:
-        if strategy.min_available_clients > num_clients:
-            raise ValueError(
-                "The number of clients must be greater than the minimum number of clients required to start a round!"
-            )
-    
+        # Reinitialize the optimizer to reset its state
+        self._optimizer = self._optim_method(self._net.parameters())
+        
     def _set_backend_config(self) -> None:
         if self._device == "cuda":
             self._backend_config = {"client_resources": {"num_cpus": self._num_cpus, "num_gpus": self._num_gpus}}
@@ -89,7 +84,9 @@ class Simulation:
             # Load model
             net = self._net.to(self._device)
             partition_id = context.node_config["partition-id"]
-            trainloader, valloader, _ = load_datasets(partition_id=partition_id, batch_size=self._batch_size, num_clients=self._num_clients)
+            trainloader, valloader, _ = load_datasets(partition_id=partition_id,
+                                                      batch_size=self._batch_size,
+                                                      num_clients=self._num_clients)
 
             return FlowerClient(net,
                                 trainloader,
@@ -124,7 +121,18 @@ class Simulation:
             backend_config=self._backend_config,
         )
 
-    # Property getters and setters
+    @staticmethod
+    def check_hardware(device: str) -> None:
+        prompt = f'Using device: {device}\nDevice name: {torch.cuda.get_device_name(device)}\nFlower {flwr.__version__} / PyTorch {torch.__version__}'
+        print(prompt)
+
+    @staticmethod
+    def check_strategy(strategy: Strategy, num_clients: int) -> None:
+        if strategy.min_available_clients > num_clients:    
+            raise ValueError(
+                "The number of clients must be greater than the minimum number of clients required to start a round!"
+            )
+
     @property
     def net(self) -> torch.nn.Module:
         return self._net

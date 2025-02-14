@@ -89,7 +89,9 @@ class FlowerClient(NumPyClient):
               device=self._device,
               optimizer=self._optimizer,
               criterion=self._criterion)
-        return get_parameters(self._net), len(self._trainloader), {}
+        
+        metric_dict = {}
+        return get_parameters(self._net), len(self._trainloader), metric_dict
 
     def evaluate(self, parameters, config):
         ''' Function utilized by the server'''
@@ -98,4 +100,6 @@ class FlowerClient(NumPyClient):
                               dataloader=self._valloader,
                               device=self._device,
                               criterion=self._criterion)
-        return float(loss), len(self._valloader), {"accuracy": float(accuracy)}
+        
+        metric_dict = {"accuracy": float(accuracy)}
+        return float(loss), len(self._valloader), metric_dict

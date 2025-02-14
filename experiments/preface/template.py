@@ -11,10 +11,12 @@ if __name__ == '__main__':
     # Add the root directory to the sys.path
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
+    # Import local modules
     from src.simulation import Simulation
     from src.models.models import Net
     from src.utils import weighted_average
 
+    # Configurations
     num_clients = 2
     num_rounds = 5
 
@@ -35,3 +37,6 @@ if __name__ == '__main__':
                      )
 
     sim.run_simulation()
+
+
+    

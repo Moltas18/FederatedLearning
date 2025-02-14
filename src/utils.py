@@ -76,6 +76,9 @@ def timer(func):
     return wrap_func
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+    '''
+    This function is called with the return from the evaluate or fit within FlowerClient 
+    '''
     # Multiply accuracy of each client by number of examples used
     accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
     examples = [num_examples for num_examples, _ in metrics]

@@ -1,7 +1,7 @@
 '''
 This file is the template upon which simulations can be build
 '''
-from typing import Type
+from typing import Type, Union
 
 import torch
 import numpy as np
@@ -11,6 +11,7 @@ from flwr.common import Context
 from flwr.server import ServerApp, ServerConfig, ServerAppComponents
 from flwr.server.strategy import Strategy, FedAvg 
 from flwr.simulation import run_simulation
+from flwr_datasets.partitioner import Partitioner
 
 from src.utils import load_datasets, timer
 from src.client_app import FlowerClient, get_parameters, set_parameters
@@ -29,6 +30,7 @@ class Simulation:
                  strategy: Strategy = FedAvg(),
                  criterion = None,
                  optim_method = None,
+                 partitioner: Union[int, Partitioner]=10
                  ) -> None:
         
         # Model
@@ -52,6 +54,7 @@ class Simulation:
         self._num_clients = num_clients
         self._num_rounds = num_rounds
         self._strategy = strategy
+        self.partitioner = partitioner
         
         # Device parameters
         self._device = device
@@ -84,9 +87,7 @@ class Simulation:
             # Load model
             net = self._net.to(self._device)
             partition_id = context.node_config["partition-id"]
-            trainloader, valloader, _ = load_datasets(partition_id=partition_id,
-                                                      batch_size=self._batch_size,
-                                                      num_clients=self._num_clients)
+            trainloader, valloader, _ = load_datasets(partition_id=partition_id, batch_size=self._batch_size, partitioner=self.partitioner)
 
             return FlowerClient(net,
                                 trainloader,

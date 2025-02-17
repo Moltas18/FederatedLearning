@@ -6,6 +6,13 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
+np.random.seed(42)
+torch.manual_seed(42)
+torch.cuda.manual_seed(42)
+torch.cuda.manual_seed_all(42)  # If using multi-GPU
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 def set_parameters(net, parameters: List[np.ndarray]):
         params_dict = zip(net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})

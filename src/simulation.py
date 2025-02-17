@@ -14,7 +14,16 @@ from flwr.simulation import run_simulation
 
 from src.utils import timer
 from src.client_app import FlowerClient, get_parameters, set_parameters
-from Data.data import Data
+from data.data import Data
+
+np.random.seed(42)
+torch.manual_seed(42)
+torch.cuda.manual_seed(42)
+torch.cuda.manual_seed_all(42)  # If using multi-GPU
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+
 class Simulation:
     
     def __init__(self,

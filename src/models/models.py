@@ -2,6 +2,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+torch.manual_seed(42)
+torch.cuda.manual_seed(42)
+torch.cuda.manual_seed_all(42)  # If using multi-GPU
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+
+torch.manual_seed(42)
+torch.cuda.manual_seed(42)
+torch.cuda.manual_seed_all(42)  # If using multi-GPU
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+
 class LeNet5(nn.Module):
     def __init__(self) -> None:
         super(LeNet5, self).__init__()

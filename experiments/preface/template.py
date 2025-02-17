@@ -16,7 +16,7 @@ if __name__ == '__main__':
     from src.simulation import Simulation
     from src.models.models import LeNet5
     from src.utils import weighted_average
-    from Data.data import Data
+    from data.data import Data
 
     # Configurations
     num_clients = 2
@@ -46,7 +46,5 @@ if __name__ == '__main__':
                      )
 
     sim.run_simulation()
-
-
 
     

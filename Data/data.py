@@ -4,6 +4,13 @@ import torchvision.transforms as transforms
 from typing import Union
 from flwr_datasets.partitioner import Partitioner
 
+torch.manual_seed(42)
+torch.cuda.manual_seed(42)
+torch.cuda.manual_seed_all(42)  # If using multi-GPU
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+
 class Data:
 
     def __init__(self,

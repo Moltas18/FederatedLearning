@@ -1,4 +1,3 @@
-import torch
 from torch.utils.data import DataLoader
 from flwr_datasets import FederatedDataset
 import torchvision.transforms as transforms
@@ -36,17 +35,18 @@ class Data:
         batch["img"] = [pytorch_transforms(img) for img in batch["img"]]
         return batch
 
+
     def get_batch_size(self, partition_train_test):
 
         dataset_sizes = {
         "train": len(partition_train_test["train"]),
         "val": len(partition_train_test["test"]),
         "test": len(self.fds.load_split("test"))
-    }
+        }
 
         if self._batch_size == "full" or self._batch_size > dataset_sizes["val"]:
             return dataset_sizes["train"], dataset_sizes["val"], dataset_sizes["test"]
-            
+
         return (self._batch_size, self._batch_size, self._batch_size)
 
 
@@ -62,7 +62,6 @@ class Data:
         # Create train, test, val batch sizes
         batch_size_train, batch_size_val, batch_size_test = self.get_batch_size(partition_train_test)
         
-
         trainloader = DataLoader(
             partition_train_test["train"], batch_size=batch_size_train, shuffle=True
         )

@@ -11,9 +11,8 @@ from flwr.common import Context
 from flwr.server import ServerApp, ServerConfig, ServerAppComponents
 from flwr.server.strategy import Strategy, FedAvg 
 from flwr.simulation import run_simulation
-from flwr_datasets.partitioner import Partitioner
 
-from src.utils import load_datasets, timer
+from src.utils import timer
 from src.client_app import FlowerClient, get_parameters, set_parameters
 from Data.data import Data
 class Simulation:
@@ -30,7 +29,6 @@ class Simulation:
                  strategy: Strategy = FedAvg(),
                  criterion = None,
                  optim_method = None,
-                 partitioner: Union[int, Partitioner]=10,
                  ) -> None:
         
         # Model
@@ -53,7 +51,6 @@ class Simulation:
         self._num_clients = num_clients
         self._num_rounds = num_rounds
         self._strategy = strategy
-        self.partitioner = partitioner
         
         # Device parameters
         self._device = device
@@ -90,7 +87,6 @@ class Simulation:
             net = self._net.to(self._device)
             partition_id = context.node_config["partition-id"]
             trainloader, valloader, _ = self._data.load_datasets(partition_id=partition_id)
-            
             return FlowerClient(net,
                                 trainloader,
                                 valloader,

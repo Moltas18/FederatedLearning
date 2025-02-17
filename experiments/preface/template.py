@@ -5,7 +5,7 @@ import sys
 import os
 from flwr.server.strategy import FedAvg
 from flwr_datasets.partitioner import DirichletPartitioner
-
+import torch
 
 if __name__ == '__main__':
     
@@ -14,13 +14,13 @@ if __name__ == '__main__':
 
     # Import local modules
     from src.simulation import Simulation
-    from src.models.models import Net
+    from src.models.models import LeNet5
     from src.utils import weighted_average
     from Data.data import Data
 
     # Configurations
     num_clients = 2
-    num_rounds = 3
+    num_rounds = 2
     batch_size = "full"
     test_size = 0.2
     seed = 42
@@ -38,12 +38,11 @@ if __name__ == '__main__':
 
     data = Data(batch_size=batch_size, partitioner=partitioner, seed=seed, test_size=test_size)
 
-    sim = Simulation(net=Net(),
+    sim = Simulation(net=LeNet5(),
                      num_clients=num_clients,
                      strategy=strategy,
                      num_rounds=num_rounds,
-                     partitioner=partitioner,
-                     data=data
+                     data=data,
                      )
 
     sim.run_simulation()

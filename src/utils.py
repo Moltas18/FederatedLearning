@@ -8,6 +8,11 @@ import yaml
 from typing import List, Tuple
 from time import time 
 
+torch.manual_seed(42)
+torch.cuda.manual_seed(42)
+torch.cuda.manual_seed_all(42)  # If using multi-GPU
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 def apply_transforms(batch):
     # Instead of passing transforms to CIFAR10(..., transform=transform)

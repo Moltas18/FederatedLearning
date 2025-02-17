@@ -6,7 +6,6 @@ import os
 from flwr.server.strategy import FedAvg
 from flwr_datasets.partitioner import DirichletPartitioner
 
-
 if __name__ == '__main__':
     
     # Add the root directory to the sys.path
@@ -16,12 +15,12 @@ if __name__ == '__main__':
     from src.simulation import Simulation
     from src.models.models import Net
     from src.utils import weighted_average
-    from Data.data import Data
+    from data.data import Data
 
     # Configurations
-    num_clients = 2
-    num_rounds = 3
-    batch_size = "full"
+    num_clients = 10
+    num_rounds = 10
+    batch_size = 1024
     test_size = 0.2
     seed = 42
     partitioner = num_clients
@@ -47,7 +46,5 @@ if __name__ == '__main__':
                      )
 
     sim.run_simulation()
-
-
 
     

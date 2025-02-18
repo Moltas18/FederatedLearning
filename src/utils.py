@@ -4,41 +4,13 @@ from flwr.common import Metrics
 import yaml
 from typing import List, Tuple
 from time import time 
+import json
 
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 torch.cuda.manual_seed_all(42)  # If using multi-GPU
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
-
-def apply_transforms(batch):
-    # Instead of passing transforms to CIFAR10(..., transform=transform)
-    # we will use this function to dataset.with_transform(apply_transforms)
-    # The transforms object is exactly the same
-
-    pytorch_transforms = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-    )
-
-    batch["img"] = [pytorch_transforms(img) for img in batch["img"]]
-    return batch
-
-def load_datasets(partition_id: int, batch_size: int=1, partitioner=None):
-
-    fds = FederatedDataset(dataset="cifar10", partitioners={"train": partitioner})
-    partition = fds.load_partition(partition_id)
-    # Divide data on each node: 80% train, 20% test
-    partition_train_test = partition.train_test_split(test_size=0.2, seed=42)
-
-    # Create train/val for each partition and wrap it into DataLoader
-    partition_train_test = partition_train_test.with_transform(apply_transforms)
-    trainloader = DataLoader(
-        partition_train_test["train"], batch_size=batch_size, shuffle=True
-    )
-    valloader = DataLoader(partition_train_test["test"], batch_size=batch_size)
-    testset = fds.load_split("test").with_transform(apply_transforms)
-    testloader = DataLoader(testset, batch_size=batch_size)
-    return trainloader, valloader, testloader
 
 def plot_image_samples(images: torch.Tensor) -> None: 
 
@@ -78,6 +50,9 @@ def timer(func):
     return wrap_func
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+
+
+
     '''
     This function is called with the return from the evaluate or fit within FlowerClient 
     '''
@@ -87,3 +62,51 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
     # Aggregate and return custom metric (weighted average)
     return {"accuracy": sum(accuracies) / sum(examples)}
+
+def plot_training_progress(metrics_file, metadata_file):
+    train_loss, val_loss = [], []
+    train_acc, val_acc = [], []
+    rounds = []
+
+    # Read the metrics file
+    with open(metrics_file, "r") as f:
+        for i, line in enumerate(f):
+            data = json.loads(line)
+            if "train_loss" in data:
+                train_loss.append(data["train_loss"])
+                train_acc.append(data["train_accuracy"])
+                rounds.append(i + 1)  # Round index starts at 1
+            elif "validation_loss" in data:
+                val_loss.append(data["validation_loss"])
+                val_acc.append(data["validation_accuracy"])
+
+    # Read the metadata file
+    with open(metadata_file, "r") as f:
+        metadata = json.load(f)
+
+    # Plot accuracy and loss
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+
+    # Accuracy Plot
+    ax[0].plot(rounds, train_acc, label="Train Accuracy", marker="o", linestyle="-")
+    ax[0].plot(rounds, val_acc, label="Validation Accuracy", marker="s", linestyle="--")
+    ax[0].set_title("Training & Validation Accuracy per Round")
+    ax[0].set_xlabel("Rounds")
+    ax[0].set_ylabel("Accuracy")
+    ax[0].legend()
+
+    # Loss Plot
+    ax[1].plot(rounds, train_loss, label="Train Loss", marker="o", linestyle="-")
+    ax[1].plot(rounds, val_loss, label="Validation Loss", marker="s", linestyle="--")
+    ax[1].set_title("Training & Validation Loss per Round")
+    ax[1].set_xlabel("Rounds")
+    ax[1].set_ylabel("Loss")
+    ax[1].legend()
+
+    # Add metadata as a text box
+    meta_text = "\n".join([f"{k}: {v}" for k, v in metadata.items()])
+    plt.gcf().text(0.75, 0.5, meta_text, fontsize=10, bbox=dict(facecolor='lightgrey', alpha=0.5))
+
+    plt.tight_layout()
+    plt.show()
+

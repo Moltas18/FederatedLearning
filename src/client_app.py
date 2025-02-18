@@ -1,4 +1,5 @@
 from flwr.client import  NumPyClient
+from flwr.common import Context, ConfigsRecord, MetricsRecord
 import torch
 from collections import OrderedDict
 from typing import List
@@ -24,8 +25,9 @@ def get_parameters(net) -> List[np.ndarray]:
 def train(net, dataloader, epochs, device, optimizer, criterion):
     """Train the network on the training set."""
     net.train()
+    total_correct, total_loss, total_samples = 0, 0.0, 0
     for epoch in range(epochs):
-        correct, total, epoch_loss = 0, 0, 0.0
+        correct, epoch_loss, total = 0, 0.0, 0
         for batch in dataloader:
             images, labels = batch["img"].to(device), batch["label"].to(device)
             optimizer.zero_grad()
@@ -34,12 +36,32 @@ def train(net, dataloader, epochs, device, optimizer, criterion):
             loss.backward()
             optimizer.step()
 
-        #     # Metrics
-        #     epoch_loss += loss
-        #     total += labels.size(0)
-        #     correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
-        # epoch_loss /= len(dataloader.dataset)
-        # epoch_acc = correct / total
+            # Metrics
+            epoch_loss += loss.item() * labels.size(0)
+            total += labels.size(0)
+            correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+        
+        total_loss += epoch_loss
+        total_correct += correct
+        total_samples += total
+
+    avg_loss = total_loss / total_samples
+    avg_accuracy = total_correct / total_samples
+
+    return avg_loss, avg_accuracy
+
+
+    #     if total != len(dataloader.dataset):
+    #         print(len(dataloader.dataset))
+    #         print(total)
+    #         print(len(dataloader))
+    #         ValueError('Nu är det kört!')
+
+    #     metric['accuracy'].append(float(epoch_acc))
+    #     metric['loss'].append(float(epoch_loss))
+    #     metric['samples'] = int(total)
+
+    # return metric
 
 def test(net, dataloader, device, criterion):
     """Evaluate the network on the entire test set."""
@@ -67,7 +89,8 @@ class FlowerClient(NumPyClient):
         epochs: int,
         device: str,
         criterion: torch.nn.modules.loss._Loss,
-        optimizer: torch.optim.Optimizer
+        optimizer: torch.optim.Optimizer,
+        context: Context, 
     ) -> None:
         
         # Parameters needed from flwr
@@ -84,21 +107,34 @@ class FlowerClient(NumPyClient):
         # Move model to correct device
         self._net.to(self._device)
 
+
+        # Later, we'll use this code to log the parameters!
+        # self.client_state = (
+        #     context.state
+        # )  # add a reference to the state of your ClientApp
+
+        # # Here we create all the metrics!
+        # if "eval_metrics" not in self.client_state.metrics_records:
+        #     self.client_state.metrics_records["eval_metrics"] = MetricsRecord()
+
+        # if "fit_metrics" not in self.client_state.metrics_records:
+        #     self.client_state.metrics_records["fit_metrics"] = MetricsRecord()
+            
     def get_parameters(self, config):
         return get_parameters(self._net)
 
     def fit(self, parameters, config):
         ''' Function utilized by the server'''
         set_parameters(self._net, parameters)
-        train(net=self._net,
-              dataloader=self._trainloader,
-              epochs=self._epochs,
-              device=self._device,
-              optimizer=self._optimizer,
-              criterion=self._criterion)
-        
-        metric_dict = {}
-        return get_parameters(self._net), len(self._trainloader), metric_dict
+        train_loss, train_acc = train(net=self._net,
+                                    dataloader=self._trainloader,
+                                    epochs=self._epochs,
+                                    device=self._device,
+                                    optimizer=self._optimizer,
+                                    criterion=self._criterion)
+
+        metrics = {"train_loss": train_loss, "train_accuracy": train_acc}
+        return get_parameters(self._net), len(self._trainloader), metrics
 
     def evaluate(self, parameters, config):
         ''' Function utilized by the server'''
@@ -108,5 +144,5 @@ class FlowerClient(NumPyClient):
                               device=self._device,
                               criterion=self._criterion)
         
-        metric_dict = {"accuracy": float(accuracy)}
+        metric_dict = {"validation_accuracy": float(accuracy)} 
         return float(loss), len(self._valloader), metric_dict

@@ -2,6 +2,9 @@
 This file is the template upon which simulations can be build
 '''
 from typing import Type, Union
+from datetime import datetime
+from pathlib import Path
+import json
 
 import torch
 import numpy as np
@@ -12,7 +15,7 @@ from flwr.server import ServerApp, ServerConfig, ServerAppComponents
 from flwr.server.strategy import Strategy, FedAvg 
 from flwr.simulation import run_simulation
 
-from src.utils import timer
+from src.utils import timer, write_to_file
 from src.client_app import FlowerClient, get_parameters, set_parameters
 from data.data import Data
 
@@ -65,17 +68,18 @@ class Simulation:
         self._device = device
         self._num_cpus = num_cpus
         self._num_gpus = num_gpus
-        
-        # Initialization functions
-        self._set_backend_config()
-        
-        # Controlling functions
-        self.check_hardware(self._device)
-        self.check_strategy(self._strategy, self._num_clients)
-        
+
         # Save data to class
         self._data = data
 
+        # Controlling functions
+        self.check_hardware(self._device)
+        self.check_strategy(self._strategy, self._num_clients)
+
+        # Initialization functions
+        self._set_backend_config()
+        self.save_path, self.run_dir = self.create_run_dir()
+        
     def reset_net(self) -> None:
         # Reset the network parameters
         set_parameters(self._net, self._orgininal_parameters)  # Ensure this updates in-place
@@ -102,7 +106,8 @@ class Simulation:
                                 self._epochs,
                                 self._device,
                                 self._criterion,
-                                self._optimizer
+                                self._optimizer,
+                                context,
                                 ).to_client()
 
     def server_fn(self, context: Context) -> ServerAppComponents:
@@ -114,6 +119,15 @@ class Simulation:
     
     @timer
     def run_simulation(self):
+
+        # Create a directory to save results and configs to!
+        config_dict = self.get_config_dict()
+        write_to_file(data=config_dict,
+                      path=self.save_path,
+                      filename='run_config')
+        
+        # Add the path to the strategy
+        self._strategy.save_path = self.save_path
         
         # Create the ClientApp
         client = ClientApp(client_fn=self.client_fn)
@@ -127,7 +141,35 @@ class Simulation:
             client_app=client,
             num_supernodes=self._num_clients,
             backend_config=self._backend_config,
+            verbose_logging=True
         )
+
+    def get_config_dict(self):
+        config_dict = {
+                'net': self._net.__class__.__name__,
+                'data': self._data.dataset, 
+                'num_clients': self._num_clients,
+                'num_rounds': self._num_rounds,
+                'epochs': self._epochs,
+                'batch_size' : self._data._batch_size,
+                'device': self._device,
+                'num_cpus': self._num_cpus,
+                'num_gpus': self._num_gpus,
+                'strategy': self.__class__.__name__,
+                'criterion': self._criterion.__class__.__name__,
+                'optim_method': self._optimizer.__class__.__name__}
+        return config_dict
+
+    @staticmethod
+    def create_run_dir():
+        """Create a directory where to save results from this run."""
+        # Create output directory given current timestamp
+        current_time = datetime.now()
+        run_dir = current_time.strftime("%Y-%m-%d/%H-%M-%S")
+        # Save path is based on the current directory
+        save_path = Path.cwd() / f"results/{run_dir}"
+        save_path.mkdir(parents=True, exist_ok=False)
+        return save_path, run_dir
 
     @staticmethod
     def check_hardware(device: str) -> None:
@@ -141,6 +183,8 @@ class Simulation:
                 "The number of clients must be greater than the minimum number of clients required to start a round!"
             )
 
+
+    # Property and setter functions
     @property
     def net(self) -> torch.nn.Module:
         return self._net

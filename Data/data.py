@@ -11,9 +11,7 @@ torch.cuda.manual_seed_all(42)  # If using multi-GPU
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-
 class Data:
-
     def __init__(self,
                  batch_size: int,
                  partitioner: Union[int, Partitioner],
@@ -22,14 +20,13 @@ class Data:
                  test_size: float=0.2
 
                  ) -> None:
-        
+        self.dataset = dataset
         self._batch_size = batch_size
         self._partitioner = partitioner
         self._seed = seed
         self.test_size = test_size
         self.fds = FederatedDataset(dataset=dataset, partitioners={"train": partitioner})
-    
-        
+
     @staticmethod
     def apply_transforms(batch):
     # Instead of passing transforms to CIFAR10(..., transform=transform)
@@ -77,3 +74,4 @@ class Data:
         testset = self.fds.load_split("test").with_transform(self.apply_transforms)
         testloader = DataLoader(testset, batch_size=batch_size_test)
         return trainloader, valloader, testloader
+    

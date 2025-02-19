@@ -6,6 +6,8 @@ from typing import List
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+import torchmetrics
+from torchmetrics.classification import Accuracy
 
 np.random.seed(42)
 torch.manual_seed(42)
@@ -23,11 +25,14 @@ def get_parameters(net) -> List[np.ndarray]:
         return [val.cpu().numpy() for _, val in net.state_dict().items()]
 
 def train(net, dataloader, epochs, device, optimizer, criterion):
-    """Train the network on the training set."""
+    """Train the network using torchmetrics."""
     net.train()
-    total_correct, total_loss, total_samples = 0, 0.0, 0
+    
+    accuracy_metric = Accuracy(task="multiclass", num_classes=net.num_classes).to(device)
+
     for epoch in range(epochs):
-        correct, epoch_loss, total = 0, 0.0, 0
+        total_loss, total_samples = 0.0, 0
+
         for batch in dataloader:
             images, labels = batch["img"].to(device), batch["label"].to(device)
             optimizer.zero_grad()
@@ -37,47 +42,38 @@ def train(net, dataloader, epochs, device, optimizer, criterion):
             optimizer.step()
 
             # Metrics
-            epoch_loss += loss.item() * labels.size(0)
-            total += labels.size(0)
-            correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
-        
-        total_loss += epoch_loss
-        total_correct += correct
-        total_samples += total
+            total_loss += loss.item() * labels.size(0)  # Weighted loss
+            total_samples += labels.size(0)
+            accuracy_metric.update(outputs, labels)  # Update torchmetrics
 
-    avg_loss = total_loss / total_samples
-    avg_accuracy = total_correct / total_samples
+        avg_loss = total_loss / total_samples if total_samples > 0 else 0.0
+        avg_accuracy = accuracy_metric.compute().item()  # Compute final accuracy
 
     return avg_loss, avg_accuracy
 
 
-    #     if total != len(dataloader.dataset):
-    #         print(len(dataloader.dataset))
-    #         print(total)
-    #         print(len(dataloader))
-    #         ValueError('Nu är det kört!')
-
-    #     metric['accuracy'].append(float(epoch_acc))
-    #     metric['loss'].append(float(epoch_loss))
-    #     metric['samples'] = int(total)
-
-    # return metric
-
 def test(net, dataloader, device, criterion):
-    """Evaluate the network on the entire test set."""
-    correct, total, loss = 0, 0, 0.0
+    """Evaluate the network using torchmetrics."""
     net.eval()
+    accuracy_metric = Accuracy(task="multiclass", num_classes=net.num_classes).to(device)
+
+    total_loss, total_samples = 0.0, 0
+
     with torch.no_grad():
         for batch in dataloader:
             images, labels = batch["img"].to(device), batch["label"].to(device)
             outputs = net(images)
-            loss += criterion(outputs, labels).item()
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    loss /= len(dataloader.dataset)
-    accuracy = correct / total
-    return loss, accuracy
+            batch_loss = criterion(outputs, labels).item() * labels.size(0)  # Weighted loss
+            
+            total_loss += batch_loss
+            total_samples += labels.size(0)
+            accuracy_metric.update(outputs, labels)
+
+    avg_loss = total_loss / total_samples if total_samples > 0 else 0.0
+    avg_accuracy = accuracy_metric.compute().item()  # Compute accuracy
+
+    return avg_loss, avg_accuracy
+
 
 class FlowerClient(NumPyClient):
     
@@ -106,7 +102,6 @@ class FlowerClient(NumPyClient):
 
         # Move model to correct device
         self._net.to(self._device)
-
 
         # Later, we'll use this code to log the parameters!
         # self.client_state = (
@@ -144,5 +139,5 @@ class FlowerClient(NumPyClient):
                               device=self._device,
                               criterion=self._criterion)
         
-        metric_dict = {"validation_accuracy": float(accuracy)} 
-        return float(loss), len(self._valloader), metric_dict
+        metrics = {"validation_accuracy": float(accuracy)} 
+        return float(loss), len(self._valloader), metrics

@@ -10,14 +10,15 @@ torch.backends.cudnn.benchmark = False
 
 
 class LeNet5(nn.Module):
-    def __init__(self) -> None:
+    def __init__(self, num_classes=10) -> None:
         super(LeNet5, self).__init__()
+        self.num_classes = num_classes
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(16 * 5 * 5, 120)
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        self.fc3 = nn.Linear(84, self.num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.pool(F.relu(self.conv1(x)))
@@ -30,9 +31,9 @@ class LeNet5(nn.Module):
 
         
 class CNN(nn.Module):
-    def __init__(self) -> None:
+    def __init__(self, num_classes=10) -> None:
         super(CNN, self).__init__()
-        
+        self.num_classes = num_classes
         # Define the convolutional layers with more filters
         self.conv1 = nn.Conv2d(3, 32, 3, padding=1)  # More filters and smaller kernel
         self.pool = nn.MaxPool2d(2, 2)
@@ -43,7 +44,7 @@ class CNN(nn.Module):
         self.fc1 = nn.Linear(128 * 4 * 4, 1024)  # Increased number of neurons
         self.fc2 = nn.Linear(1024, 512)          # Increased number of neurons
         self.fc3 = nn.Linear(512, 256)           # Increased number of neurons
-        self.fc4 = nn.Linear(256, 10)            # Output layer for CIFAR-10 (10 classes)
+        self.fc4 = nn.Linear(256, self.num_classes)            # Output layer for CIFAR-10 (10 classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Apply convolutional layers and pooling

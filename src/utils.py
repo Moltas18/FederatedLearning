@@ -61,13 +61,16 @@ def eval_weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     # Aggregate and return custom metric (weighted average)
     return {"validation_accuracy": sum(accuracies) / sum(examples)}
 
-def plot_training_progress(metrics_file, metadata_file):
+def plot_run_results(metrics_path: str, config_path: str) -> None:
+    '''
+    This function plots the training progress of a simulation
+    '''
     train_loss, val_loss = [], []
     train_acc, val_acc = [], []
     rounds = []
 
     # Read the metrics file
-    with open(metrics_file, "r") as f:
+    with open(metrics_path, "r") as f:
         for i, line in enumerate(f):
             data = json.loads(line)
             if "train_loss" in data:
@@ -79,7 +82,7 @@ def plot_training_progress(metrics_file, metadata_file):
                 val_acc.append(data["validation_accuracy"])
 
     # Read the metadata file
-    with open(metadata_file, "r") as f:
+    with open(config_path, "r") as f:
         metadata = json.load(f)
 
     # Plot accuracy and loss

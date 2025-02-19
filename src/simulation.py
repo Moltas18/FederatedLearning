@@ -118,7 +118,8 @@ class Simulation:
         return ServerAppComponents(strategy=self._strategy, config=config)
     
     @timer
-    def run_simulation(self):
+    def run_simulation(self) -> Path:
+        '''Run the simulation'''
 
         # Create a directory to save results and configs to!
         config_dict = self.get_config_dict()
@@ -144,6 +145,8 @@ class Simulation:
             verbose_logging=True
         )
 
+        return self.save_path
+    
     def get_config_dict(self):
         config_dict = {
                 'net': self._net.__class__.__name__,
@@ -182,7 +185,6 @@ class Simulation:
             raise ValueError(
                 "The number of clients must be greater than the minimum number of clients required to start a round!"
             )
-
 
     # Property and setter functions
     @property

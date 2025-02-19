@@ -53,7 +53,7 @@ class Simulation:
         self._criterion = criterion if criterion else torch.nn.CrossEntropyLoss()
 
         # Ensure optimizer is properly initialized
-        self._optim_method = optim_method if optim_method else torch.optim.Adam
+        self._optim_method = optim_method if optim_method else torch.optim.SGD
         self._optimizer = self._optim_method(self._net.parameters())
 
         # Training parameters

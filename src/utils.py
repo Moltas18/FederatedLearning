@@ -136,3 +136,42 @@ def write_to_file(data, path, filename):
     with open(f"{path}/{filename}.jsonl", "a", encoding="utf-8") as fp:
         json.dump(data, fp)
         fp.write("\n")  # Ensures each JSON object is on a new line
+import json
+import matplotlib.pyplot as plt
+
+def plot_multiple_validation_curves(metrics_files, config_files):
+    """
+    Plots validation accuracy curves from multiple test runs with different batch sizes.
+    
+    Args:
+        metrics_files (list of str): Paths to JSONL metric files containing per-round validation results.
+        config_files (list of str): Paths to JSONL config files containing run settings.
+    """
+    plt.figure(figsize=(10, 6))
+
+    for metrics_file, config_file in zip(metrics_files, config_files):
+        # Read config file to extract batch size
+        with open(config_file, "r") as f:
+            config = json.load(f)
+        batch_size = config.get("batch_size", "Unknown")
+
+        # Read validation accuracy from metrics file
+        rounds = []
+        val_accuracies = []
+        with open(metrics_file, "r") as f:
+            for line in f:
+                data = json.loads(line)
+                if "validation_accuracy" in data:
+                    rounds.append(len(rounds) + 1)  # Assuming one entry per round
+                    val_accuracies.append(data["validation_accuracy"])
+
+        # Plot validation accuracy for this batch size
+        plt.plot(rounds, val_accuracies, marker="o", linestyle="-", label=f"Batch {batch_size}")
+
+    # Labels and title
+    plt.xlabel("Round")
+    plt.ylabel("Validation Accuracy")
+    plt.title("Validation Accuracy per Round for Different Batch Sizes")
+    plt.legend()
+    plt.grid(True)
+    plt.show()

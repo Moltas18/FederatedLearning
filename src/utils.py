@@ -136,8 +136,6 @@ def write_to_file(data, path, filename):
     with open(f"{path}/{filename}.jsonl", "a", encoding="utf-8") as fp:
         json.dump(data, fp)
         fp.write("\n")  # Ensures each JSON object is on a new line
-import json
-import matplotlib.pyplot as plt
 
 def plot_multiple_validation_curves(metrics_files, config_files):
     """

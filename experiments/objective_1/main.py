@@ -11,14 +11,14 @@ if __name__ == '__main__':
 
     # Import local modules
     from src.simulation import Simulation
-    from src.models.models import Net
-    from src.utils import fit_weighted_average, eval_weighted_average
+    from src.models.models import LeNet5, CNN 
+    from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results
     from data.data import Data
     from src.strategy import CustomFedAvg
 
     # Configurations
-    num_clients = 10
-    num_rounds = 50
+    num_clients = 2
+    num_rounds = 2 
     batch_size = "full"
     test_size = 0.2
     seed = 42
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     data = Data(batch_size=batch_size, partitioner=partitioner, seed=seed, test_size=test_size)
 
-    sim = Simulation(net=Net(),
+    sim = Simulation(net=LeNet5(),
                      num_clients=num_clients,
                      strategy=strategy,
                      num_rounds=num_rounds,
@@ -48,4 +48,9 @@ if __name__ == '__main__':
                      epochs=1
                      )
 
-    sim.run_simulation()
+    run_path = sim.run_simulation()
+
+    config_path = run_path /  'run_config.jsonl'
+    metrics_path = run_path / 'metrics.jsonl'
+
+    plot_run_results(metrics_path=metrics_path, config_path=config_path)

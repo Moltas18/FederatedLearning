@@ -3,6 +3,7 @@ from flwr_datasets import FederatedDataset
 import torchvision.transforms as transforms
 from typing import Union
 from flwr_datasets.partitioner import Partitioner
+import torch
 
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)

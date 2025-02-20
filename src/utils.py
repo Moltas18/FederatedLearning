@@ -83,8 +83,15 @@ def plot_run_results(metrics_path: str, config_path: str) -> None:
 
     # Read the metadata file
     with open(config_path, "r") as f:
-        metadata = json.load(f)
-
+        config = json.load(f)
+    legend_info = (
+    f"Model: {config['net']}\n"
+    f"Clients: {config['num_clients']}\n"
+    f"Rounds: {config['num_rounds']}\n"
+    f"Epochs: {config['epochs']}\n"
+    f"Batch: {config['batch_size']}"
+   )
+    
     # Plot accuracy and loss
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
 
@@ -105,8 +112,7 @@ def plot_run_results(metrics_path: str, config_path: str) -> None:
     ax[1].legend()
 
     # Add metadata as a text box
-    meta_text = "\n".join([f"{k}: {v}" for k, v in metadata.items()])
-    plt.gcf().text(0.75, 0.5, meta_text, fontsize=10, bbox=dict(facecolor='lightgrey', alpha=0.5))
+    plt.gcf().text(0.75, 0.65, legend_info, fontsize=10, bbox=dict(facecolor='lightgrey', alpha=0.5))
 
     plt.tight_layout()
     plt.show()

@@ -28,7 +28,6 @@ class LeNet5(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
-
         
 class CNN(nn.Module):
     def __init__(self, num_classes=10) -> None:

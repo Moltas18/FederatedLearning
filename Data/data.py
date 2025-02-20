@@ -15,63 +15,64 @@ class Data:
     def __init__(self,
                  batch_size: int,
                  partitioner: Union[int, Partitioner],
-                 dataset: str="cifar10",
-                 seed: int=42,
-                 test_size: float=0.2
-
-                 ) -> None:
+                 dataset: str = "cifar10",
+                 seed: int = 42,
+                 val_size: float = 0.2,
+                 val_test_batch_size: int=64) -> None:
+        
         self.dataset = dataset
-        self._batch_size = batch_size
+        self._batch_size = batch_size  # The batch size for training
+        self._val_test_batch_size = val_test_batch_size  # The batch size for validation and testing
         self._partitioner = partitioner
         self._seed = seed
-        self.test_size = test_size
-        self.fds = FederatedDataset(dataset=dataset, partitioners={"train": partitioner})
+        self._val_size = val_size
+        self.fds = FederatedDataset(dataset=self.dataset,
+                                    partitioners={"train": self._partitioner},
+                                    seed=self._seed)
+        
+        # Create test loader before partitioning the data, so that the test data is the same for all partitions
+        self.create_test_loader()
 
     @staticmethod
     def apply_transforms(batch):
-    # Instead of passing transforms to CIFAR10(..., transform=transform)
-    # we will use this function to dataset.with_transform(apply_transforms)
-    # The transforms object is exactly the same
-
-        pytorch_transforms = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-        )
+        """Apply PyTorch transforms to the dataset."""
+        pytorch_transforms = transforms.Compose([
+            transforms.ToTensor(), 
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ])
 
         batch["img"] = [pytorch_transforms(img) for img in batch["img"]]
         return batch
 
-
     def get_batch_size(self, partition_train_test):
+        """Determine the batch size for training, validation, and testing."""
+        trainset_size = len(partition_train_test["train"])
 
-        dataset_sizes = {
-        "train": len(partition_train_test["train"]),
-        "val": len(partition_train_test["test"]),
-        "test": len(self.fds.load_split("test"))
-        }
+        if self._batch_size == "full" or self._batch_size > trainset_size:
+            return trainset_size, self._val_test_batch_size  # Full train batch, fixed val/test batch
+        else:
+            return self._batch_size, self._val_test_batch_size  # Custom train batch, fixed val/test batch
 
-        if self._batch_size == "full" or self._batch_size > dataset_sizes["val"]:
-            return dataset_sizes["train"], dataset_sizes["val"], dataset_sizes["test"]
-
-        return (self._batch_size, self._batch_size, self._batch_size)
-
+    def create_test_loader(self) -> None:
+        """Create test data loader before partitioning."""
+        testset = self.fds.load_split("test").with_transform(self.apply_transforms)
+        self.testloader = DataLoader(testset, batch_size=self._val_test_batch_size)
 
     def load_datasets(self, partition_id: int):
-        
+        """Load training and validation datasets for a given partition."""
         partition = self.fds.load_partition(partition_id)
-        # Divide data on each node: 80% train, 20% test
-        partition_train_test = partition.train_test_split(test_size=self.test_size, seed=self._seed)
-
-        # Create train/val for each partition and wrap it into DataLoader
+        
+        # Split into train (80%) and validation (20%)
+        partition_train_test = partition.train_test_split(test_size=self._val_size, seed=self._seed)
+        
+        # Apply transformations
         partition_train_test = partition_train_test.with_transform(self.apply_transforms)
         
-        # Create train, test, val batch sizes
-        batch_size_train, batch_size_val, batch_size_test = self.get_batch_size(partition_train_test)
+        # Get batch sizes
+        batch_size_train, batch_size_val = self.get_batch_size(partition_train_test)
         
-        trainloader = DataLoader(
-            partition_train_test["train"], batch_size=batch_size_train, shuffle=True
-        )
+        # Create DataLoaders
+        trainloader = DataLoader(partition_train_test["train"], batch_size=batch_size_train, shuffle=True)
         valloader = DataLoader(partition_train_test["test"], batch_size=batch_size_val)
-        testset = self.fds.load_split("test").with_transform(self.apply_transforms)
-        testloader = DataLoader(testset, batch_size=batch_size_test)
-        return trainloader, valloader, testloader
-    
+
+        return trainloader, valloader, self.testloader

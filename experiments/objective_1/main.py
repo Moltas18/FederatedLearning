@@ -3,6 +3,7 @@ This file is the template upon which simulations can be build
 '''
 import sys
 import os
+import torch
 
 if __name__ == '__main__':
     
@@ -16,36 +17,54 @@ if __name__ == '__main__':
     from data.data import Data
     from src.strategy import CustomFedAvg
 
-    # Configurations
-    num_clients = 2
-    num_rounds = 2 
-    batch_size = "full"
-    test_size = 0.2
-    seed = 42
-    partitioner = num_clients
-    num_gpus = 1/num_clients
-    epochs = 1
+    ### Configurations
 
+    # Federated learning configurations
+    num_clients = 10
+    num_rounds = 3
+
+    # Model configurations
+    epochs = 1
+    net = LeNet5()
+
+    # Data configurations
+    batch_size = 'full'
+    val_test_batch_size = 256
+    val_size = 0.2
+    partitioner = num_clients
+
+    # General configurations
+    seed = 42
+    num_gpus = 1/num_clients
+    num_cpus = 1
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    
     # Create FedAvg strategy
     strategy = CustomFedAvg(
         fraction_fit=1.0,  # Sample 100% of available clients for training
-        fraction_evaluate=1.0,  # Sample 50% of available clients for evaluation
+        fraction_evaluate=1.0,  # Sample 100% of available clients for evaluation
         min_fit_clients=num_clients,  # Never sample less than 10 clients for training
-        min_evaluate_clients=num_clients,  # Never sample less than 5 clients for evaluation
-        min_available_clients=num_clients,  # Wait until all 10 clients are available
-        evaluate_metrics_aggregation_fn=eval_weighted_average,
-        fit_metrics_aggregation_fn=fit_weighted_average
+        min_evaluate_clients=num_clients,  # Never sample less than 10 clients for evaluation
+        min_available_clients=num_clients,  # Wait until all 10 clients are available before training
+        evaluate_metrics_aggregation_fn=eval_weighted_average, # function for aggregating evaluation metrics (e.g., accuracy)
+        fit_metrics_aggregation_fn=fit_weighted_average # function for aggregating fit metrics (e.g., train loss, train accuracy)
     )
 
-    data = Data(batch_size=batch_size, partitioner=partitioner, seed=seed, test_size=test_size)
+    data = Data(batch_size=batch_size,
+                partitioner=partitioner,
+                seed=seed,
+                val_size=val_size,
+                val_test_batch_size=val_test_batch_size)
 
-    sim = Simulation(net=LeNet5(),
-                     num_clients=num_clients,
-                     strategy=strategy,
-                     num_rounds=num_rounds,
+    sim = Simulation(net=net,
                      data=data,
+                     num_clients=num_clients,
+                     num_rounds=num_rounds,
+                     epochs=epochs,
+                     device=device,
+                     num_cpus=num_cpus,
                      num_gpus=num_gpus,
-                     epochs=1
+                     strategy=strategy,
                      )
 
     run_path = sim.run_simulation()

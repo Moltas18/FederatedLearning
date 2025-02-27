@@ -26,7 +26,6 @@ torch.cuda.manual_seed_all(42)  # If using multi-GPU
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-
 class Simulation:
     
     def __init__(self,
@@ -79,7 +78,7 @@ class Simulation:
         # Initialization functions
         self._set_backend_config()
         self.save_path, self.run_dir = self.create_run_dir()
-        
+
     def reset_net(self) -> None:
         # Reset the network parameters
         set_parameters(self._net, self._orgininal_parameters)  # Ensure this updates in-place
@@ -100,6 +99,7 @@ class Simulation:
             net = self._net.to(self._device)
             partition_id = context.node_config["partition-id"]
             trainloader, valloader, _ = self._data.load_datasets(partition_id=partition_id)
+
             return FlowerClient(net,
                                 trainloader,
                                 valloader,
@@ -107,6 +107,7 @@ class Simulation:
                                 self._device,
                                 self._criterion,
                                 self._optimizer,
+                                self.save_path,
                                 context,
                                 ).to_client()
 
@@ -129,6 +130,7 @@ class Simulation:
         
         # Add the path to the strategy
         self._strategy.save_path = self.save_path
+
         
         # Create the ClientApp
         client = ClientApp(client_fn=self.client_fn)
@@ -160,7 +162,8 @@ class Simulation:
                 'num_gpus': self._num_gpus,
                 'strategy': self.__class__.__name__,
                 'criterion': self._criterion.__class__.__name__,
-                'optim_method': self._optimizer.__class__.__name__}
+                'optim_method': self._optimizer.__class__.__name__,
+                'learning_rate': self._optimizer.param_groups[0]['lr']}
         return config_dict
 
     @staticmethod

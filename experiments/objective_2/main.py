@@ -1,3 +1,7 @@
+'''
+This file can be used to generate parameters. Analysis is done in a seperate file.
+'''
+
 import sys
 import os
 import torch
@@ -10,15 +14,15 @@ if __name__ == '__main__':
     # Import local modules
     from src.simulation import Simulation
     from src.models.models import LeNet5, CNN 
-    from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results
+    from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results, read_from_file
     from data.data import Data
     from src.strategy import CustomFedAvg
 
     ### Configurations
 
     # Federated learning configurations
-    num_clients = 11
-    num_rounds = 1
+    num_clients = 1
+    num_rounds = 5
 
     # Model configurations
     epochs = 1
@@ -36,6 +40,14 @@ if __name__ == '__main__':
     num_gpus = 1/num_clients
     num_cpus = 1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    # Save parameters
+    save_parameters = True
+
+    # Fit config function. Mainly used to save parameters
+    def fit_config(server_round: int) -> dict:
+        '''this function is called before the fit function in FlowerClient to generate the configuration for training'''
+        return {"save_parameters": save_parameters, "server_round": server_round}
     
     # Create FedAvg strategy
     strategy = CustomFedAvg(
@@ -45,7 +57,8 @@ if __name__ == '__main__':
         min_evaluate_clients=num_clients,  # Never sample less than 10 clients for evaluation
         min_available_clients=num_clients,  # Wait until all 10 clients are available before training
         evaluate_metrics_aggregation_fn=eval_weighted_average, # function for aggregating evaluation metrics (e.g., accuracy)
-        fit_metrics_aggregation_fn=fit_weighted_average # function for aggregating fit metrics (e.g., train loss, train accuracy)
+        fit_metrics_aggregation_fn=fit_weighted_average, # function for aggregating fit metrics (e.g., train loss, train accuracy)
+        on_fit_config_fn=fit_config # function for generating training configuration which saves parameters
     )
 
     data = Data(batch_size=batch_size,
@@ -70,5 +83,6 @@ if __name__ == '__main__':
 
     config_path = run_path /  'run_config.jsonl'
     metrics_path = run_path / 'metrics.jsonl'
+    parameters_path = run_path / 'parameters.jsonl'
 
     plot_run_results(metrics_path=metrics_path, config_path=config_path)

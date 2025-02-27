@@ -10,7 +10,20 @@ This repository contains the code for the **Federated Learning Master's Thesis**
 - [License](#license)  
 
 ## Installation  
-To install all required dependencies, run:  
+Python 3.12.9 has been used during development of this repository. It is unclear if the environment can be set up with any other version.
+
+We strongly recommend using a virtual environment for dependencies. To set it up, run:   
+```sh  
+python -m venv env
+```
+
+Before installing any dependencies, make sure to activate it by running: 
+
+```sh  
+.\env\Scripts\activate
+```
+
+Once the environment is activated - to install all required dependencies, run:  
 ```sh  
 pip install -r requirements.txt  
 ```  
@@ -21,14 +34,13 @@ pip install --no-cache-dir -r requirements.txt
 
 ### GPU Acceleration (Optional)  
 For improved performance, CUDA is recommended if GPUs are available.  
-- This project was developed using **CUDA 12.8** on **Windows 10**, but compatibility with other versions has not been tested.  
-- Download CUDA here: [CUDA Downloads](https://developer.nvidia.com/cuda-downloads).  
+- This project was developed using **CUDA 12.6** on **Windows 10**, but compatibility with other versions has not been tested.  
 
 ## Project Structure  
 ```plaintext  
 federated-learning-thesis/  
-├── data/                       # For datasets (consider using symlinks for large datasets)  
-├── experiments/                # Experiment scripts and configurations  
+├── data/                       # Holds datasets and the Data class that handles partitioning
+├── experiments/                # Experiment scripts  
 ├── src/                        # Source code  
 │   ├── client/                 # Client-side federated learning code  
 │   ├── server/                 # Server-side federated learning code  
@@ -37,7 +49,6 @@ federated-learning-thesis/
 ├── notebooks/                  # Jupyter notebooks  
 ├── logs/                       # Logs for experiments 
 ├── results/                    # Experiment results
-├── config/                     # Config files (JSON, YAML, etc.) for experiments and model settings  
 └── tests/                      # Unit tests and integration tests  
     ├── test_client.py          # Tests for client code  
     ├── test_server.py          # Tests for server code  
@@ -51,19 +62,6 @@ which is an adaption of the the [Get started with Flower](https://flower.ai/docs
 ### Running a Basic Example  
 Run the following command to start a basic federated learning setup:  
 ```sh  
-python experiments/run_example.py  
+python experiments/template/template.py  
 ```  
-Modify `config/` files to adjust settings such as the number of clients, training rounds, and hyperparameters.  
-
-## Running Experiments  
-1. Configure your experiment settings in the `config/` directory.  
-2. Start the federated learning process:  
-   ```sh  
-   python experiments/train.py  
-   ```  
-3. Logs will be saved in the `logs/` directory.  
-4. Results will be stored in the `results/` directory.  
-
-## License  
-This project is for academic use. Licensing terms will be updated later.  
-
+The results and corresponding configurations for the specific run will be saved in `results/`

@@ -62,7 +62,7 @@ class Data:
         """Load training and validation datasets for a given partition."""
         partition = self.fds.load_partition(partition_id)
         
-        # Split into train (80%) and validation (20%)
+        # Split into train (100(1-test_size)%) and validation (test_size*100%)
         partition_train_test = partition.train_test_split(test_size=self._val_size, seed=self._seed)
         
         # Apply transformations

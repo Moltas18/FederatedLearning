@@ -114,39 +114,54 @@ def read_from_file(path: Union[str, Path]) -> list:
     with open(path, 'r') as file:
         return [json.loads(line) for line in file]
 
-def parse_run(config_path: Union[str, Path],
-              parameters_path: Union[str, Path]) -> pd.DataFrame:
-    config = read_from_file(config_path)[0]
-    run_parameters = read_from_file(parameters_path)
+def get_filenames(directory: Union[str, Path]) -> List[str]:
+    directory_path = Path(directory)
+    filenames = [file.name for file in directory_path.iterdir() if file.is_file()]
+    return filenames
 
-    data = {
-        'Server Round' : [],
-        'Client ID': [],
-        'Batch Size': [],
-        'Num Batches': [],
-        'Partition ID': [],
-        'Initial Parameters': [],
-        'Updated Parameters': [],
-    }
-    
-    for training in run_parameters:
-        data['Server Round'].append(training['run_info']['server_round'])
-        data['Client ID'].append(training['run_info']['client_id'])
-        data['Batch Size'].append(training['run_info']['batch_size'])
-        data['Num Batches'].append(training['run_info']['num_batches'])
-        data['Partition ID'].append(training['run_info']['node_config']['partition-id'])
-        data['Initial Parameters'].append(training['parameters']['parameters_before_training'])
-        data['Updated Parameters'].append(training['parameters']['parameters_after_training'])
+def parse_run(run_path: Union[str, Path]) -> pd.DataFrame:
 
-    df = pd.DataFrame(data)
-    df['Epochs'] = config['epochs']
-    df['Net'] = config['net']
-    df['Num Clients'] = config['num_clients']
-    df['Total Rounds'] = config['num_rounds']
-    df['Optimizer'] = config['optim_method']
-    df['Learning Rate'] = config['learning_rate']
-    
-    return df
+        # Read config
+        config_path = run_path + 'run_config.jsonl'
+        config = read_from_file(config_path)[0]
+
+        # Get the file names of the parameters saving (from each client)
+        parameters_path = run_path + 'parameters/'
+        parameters_files = get_filenames(parameters_path)
+
+        # Predefine dict for dataframe
+        data = {
+            'Server Round' : [],
+            'Client ID': [],
+            'Batch Size': [],
+            'Num Batches': [],
+            'Partition ID': [],
+            'Initial Parameters': [],
+            'Updated Parameters': [],
+        }
+        
+        # Loop through all of the parameter files
+        for parameters_file in parameters_files:
+            run_parameters = read_from_file(parameters_path + parameters_file) # Not sure this works!
+            for training in run_parameters:
+                data['Server Round'].append(training['run_info']['server_round'])
+                data['Client ID'].append(training['run_info']['client_id'])
+                data['Batch Size'].append(training['run_info']['batch_size'])
+                data['Num Batches'].append(training['run_info']['num_batches'])
+                data['Partition ID'].append(training['run_info']['node_config']['partition-id'])
+                data['Initial Parameters'].append(training['parameters']['parameters_before_training'])
+                data['Updated Parameters'].append(training['parameters']['parameters_after_training'])
+
+        # Create dataframe
+        df = pd.DataFrame(data)
+        df['Epochs'] = config['epochs']
+        df['Net'] = config['net']
+        df['Num Clients'] = config['num_clients']
+        df['Total Rounds'] = config['num_rounds']
+        df['Optimizer'] = config['optim_method']
+        df['Learning Rate'] = config['learning_rate']
+        
+        return df
 
 def plot_image_samples(images: torch.Tensor) -> None: 
 

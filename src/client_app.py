@@ -48,7 +48,6 @@ def train(net, dataloader, epochs, device, optimizer, criterion) -> float:
 
     return avg_loss, avg_accuracy
 
-
 def test(net, dataloader, device, criterion):
     """Evaluate the network using torchmetrics."""
     net.eval()
@@ -70,7 +69,6 @@ def test(net, dataloader, device, criterion):
     avg_accuracy = accuracy_metric.compute().item()  # Compute accuracy
 
     return avg_loss, avg_accuracy
-
 
 class FlowerClient(NumPyClient):
     
@@ -105,6 +103,7 @@ class FlowerClient(NumPyClient):
         self._context = context
 
         # Save the path to save the parameters
+        # include /parameters after the path
         self._save_path = save_path
             
     def get_parameters(self, config):
@@ -169,6 +168,11 @@ class FlowerClient(NumPyClient):
         ''' Function to write parameters to a file specifically for parameters'''
         data = {
             "run_info": run_info,
-            "parameters": parameters
+            "parameters": parameters,
         }
-        write_to_file(data=data, path=self._save_path, filename='parameters')
+        # A new direcotry needs to be created were parameters JSONL-files are stored for each client
+        parameters_path = self._save_path / "parameters"
+        parameters_path.mkdir(parents=True, exist_ok=True)
+
+        # We create one parameters-file per client inside the parameters directory
+        write_to_file(data=data, path=parameters_path, filename=str(self._context.node_id))

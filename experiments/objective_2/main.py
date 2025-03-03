@@ -14,27 +14,33 @@ if __name__ == '__main__':
     # Import local modules
     from src.simulation import Simulation
     from src.models.models import LeNet5, CNN 
-    from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results, read_from_file
+    from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results, read_from_file, parse_run
     from data.data import Data
     from src.strategy import CustomFedAvg
 
     ### Configurations
 
     # Federated learning configurations
-    num_clients = 1
-    num_rounds = 5
+    num_clients = 10
+    num_rounds = 10
 
     # Model configurations
     epochs = 1
     net = LeNet5()
     criterion = torch.nn.CrossEntropyLoss()
 
+    # # Data configurations
+    # batch_size = 'full'
+    # val_test_batch_size = 256
+    # val_size = 0.5 # 50% of the data is used for validation (we use one image for training and one for validation)
+    # partitioner = 25000 # 2 images per partition; one for validation and one for training
+
     # Data configurations
     batch_size = 'full'
     val_test_batch_size = 256
     val_size = 0.2
     partitioner = num_clients
-
+    
     # General configurations
     seed = 42
     num_gpus = 1/num_clients
@@ -67,6 +73,14 @@ if __name__ == '__main__':
                 val_size=val_size,
                 val_test_batch_size=val_test_batch_size)
 
+    # # Test partition ID 0 and 1.
+    # trainloader, valloader, testloader = data.load_datasets(partition_id=0)
+    
+    # print(trainloader.batch_size)
+    
+    # for batch in trainloader:
+    #     images, labels = batch["img"], batch["label"]
+
     sim = Simulation(net=net,
                      data=data,
                      num_clients=num_clients,
@@ -81,8 +95,9 @@ if __name__ == '__main__':
 
     run_path = sim.run_simulation()
 
-    config_path = run_path /  'run_config.jsonl'
-    metrics_path = run_path / 'metrics.jsonl'
-    parameters_path = run_path / 'parameters.jsonl'
+    # config_path = run_path /  'run_config.jsonl'
+    # metrics_path = run_path / 'metrics.jsonl'
+    # parameters_path = run_path / 'parameters.jsonl'
 
-    plot_run_results(metrics_path=metrics_path, config_path=config_path)
+    # df = parse_run(config_path, parameters_path)
+    

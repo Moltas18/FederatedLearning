@@ -39,7 +39,6 @@ class GradientApproximation:
         approcimated_gradient = [(w0 - w1) / (self.lr * self.epochs) for w0, w1 in zip(self.W0, self.W1)]
         
         return approcimated_gradient
-
     
 class ParameterDifference:
     def __init__(self, W0: List[torch.Tensor], W1: List[torch.Tensor]):

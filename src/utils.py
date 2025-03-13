@@ -77,7 +77,7 @@ def fit_weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 def set_parameters(net, parameters: List[np.ndarray]):
         params_dict = zip(net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
-        net.load_state_dict(state_dict, strict=True)
+        net.load_state_dict(state_dict, strict=False)
 
 def get_parameters(net) -> List[np.ndarray]:
         return [val.cpu().numpy() for _, val in net.state_dict().items()]
@@ -92,6 +92,13 @@ def serialize_parameters(net: torch.nn.Module, parameters: List[np.ndarray]) -> 
 def deserialize_parameters(parameters_record: dict) -> List[torch.Tensor]:
     # Convert JSON-compatible lists directly to PyTorch tensors
     return [torch.tensor(v).cpu().detach() for v in parameters_record.values()]
+
+def dict_list_to_dict_tensor(parameters_record: dict) -> dict:
+    # return {k: torch.tensor(v) for k, v in parameters_record.items()}
+    for key, value in parameters_record.items():
+        if isinstance(value, list):  # Convert lists to tensors
+            parameters_record[key] = torch.tensor(value)
+    return parameters_record
 
 def write_to_file(data, path, filename):
     with open(f"{path}/{filename}.jsonl", "a", encoding="utf-8") as fp:
@@ -275,4 +282,59 @@ def plot_run_results(metrics_path: str, config_path: str) -> None:
     plt.gcf().text(0.75, 0.65, legend_info, fontsize=10, bbox=dict(facecolor='lightgrey', alpha=0.5))
 
     plt.tight_layout()
+    plt.show()
+
+def denormalize(img):
+        device = img.device
+        mean = torch.tensor([0.5, 0.5, 0.5], device=device).view(3, 1, 1)
+        std = torch.tensor([0.5, 0.5, 0.5], device=device).view(3, 1, 1)
+        return img * std + mean  # Reverse normalization
+    
+def plot_reconstruction(ground_truth_images: torch.Tensor, reconstructed_images: torch.Tensor) -> None:
+    '''Function to plot ground truth and reconstructed images.
+    Tensors should be of shape (batch_size, C, H, W).
+    '''
+
+    assert ground_truth_images.shape == reconstructed_images.shape, "The input tensors must have the same shape"
+
+    batch_size = ground_truth_images.shape[0]
+
+    # Detach, clone, and denormalize images
+    ground_truth_images = denormalize(ground_truth_images.clone().detach())
+    reconstructed_images = denormalize(reconstructed_images.clone().detach())
+
+    # Create subplots
+    fig, axes = plt.subplots(2, batch_size, figsize=(batch_size * 3, 6))
+
+    # Ensure `axes` is always a 2D array
+    if batch_size == 1:
+        axes = axes[:, None]  # Convert 1D array to 2D (shape: (2, 1))
+
+    # Add titles for each row
+    axes[0, 0].set_title("Reconstructed Images", fontsize=14, fontweight='bold')
+    axes[1, 0].set_title("Ground Truth Images", fontsize=14, fontweight='bold')
+
+    for i in range(batch_size):
+        
+        axes[0, i].imshow(reconstructed_images[i].permute(1, 2, 0).cpu())
+        axes[0, i].axis('off')
+
+        axes[1, i].imshow(ground_truth_images[i].permute(1, 2, 0).cpu())
+        axes[1, i].axis('off')
+
+    # Adjust layout for better spacing
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_loss(history_loss:list):
+    '''
+    This function plots the loss of a model during training
+    '''
+    plt.figure(figsize=(10, 6))
+    plt.plot(history_loss, label='Training Loss')
+    plt.xlabel('Iterations')
+    plt.ylabel('Loss')
+    plt.title('Reconstruction Loss')
+    plt.legend()
     plt.show()

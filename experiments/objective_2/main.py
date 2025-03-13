@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
     # Import local modules
     from src.simulation import Simulation
-    from src.models.models import LeNet5, CNN 
+    from src.models.models import LeNet5, CNN, LeNet
     from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results, read_from_file, parse_run
     from data.data import Data
     from src.strategy import CustomFedAvg
@@ -26,20 +26,14 @@ if __name__ == '__main__':
 
     # Model configurations
     epochs = 1
-    net = LeNet5()
+    net = LeNet()
     criterion = torch.nn.CrossEntropyLoss()
-
-    # # Data configurations
-    # batch_size = 'full'
-    # val_test_batch_size = 256
-    # val_size = 0.5 # 50% of the data is used for validation (we use one image for training and one for validation)
-    # partitioner = 25000 # 2 images per partition; one for validation and one for training
 
     # Data configurations
     batch_size = 'full'
     val_test_batch_size = 256
-    val_size = 0.2
-    partitioner = num_clients
+    val_size = 0.5 # 50% of the data is used for validation (we use one image for training and one for validation)
+    partitioner = 25000 # 2 images per partition; one for validation and one for training
     
     # General configurations
     seed = 42
@@ -73,14 +67,6 @@ if __name__ == '__main__':
                 val_size=val_size,
                 val_test_batch_size=val_test_batch_size)
 
-    # # Test partition ID 0 and 1.
-    # trainloader, valloader, testloader = data.load_datasets(partition_id=0)
-    
-    # print(trainloader.batch_size)
-    
-    # for batch in trainloader:
-    #     images, labels = batch["img"], batch["label"]
-
     sim = Simulation(net=net,
                      data=data,
                      num_clients=num_clients,
@@ -94,10 +80,3 @@ if __name__ == '__main__':
                      )
 
     run_path = sim.run_simulation()
-
-    # config_path = run_path /  'run_config.jsonl'
-    # metrics_path = run_path / 'metrics.jsonl'
-    # parameters_path = run_path / 'parameters.jsonl'
-
-    # df = parse_run(config_path, parameters_path)
-    

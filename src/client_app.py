@@ -112,12 +112,12 @@ class FlowerClient(NumPyClient):
     def fit(self, parameters, config):
         ''' Function utilized by the server'''
         
+        # Set the parameters to the model
+        set_parameters(self._net, parameters)
+
         # Save serialized initial parameters (These parameters comes from the global model)
         if config['save_parameters']:
             serialized_initial_parameters = serialize_parameters(self._net, parameters)
-        
-        # Set the parameters to the model
-        set_parameters(self._net, parameters)
         
         train_loss, train_acc = train(net=self._net,
                                     dataloader=self._trainloader,
@@ -176,3 +176,4 @@ class FlowerClient(NumPyClient):
 
         # We create one parameters-file per client inside the parameters directory
         write_to_file(data=data, path=parameters_path, filename=str(self._context.node_id))
+        

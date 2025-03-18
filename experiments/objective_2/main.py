@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
     # Import local modules
     from src.simulation import Simulation
-    from src.models.models import LeNet5, CNN, LeNet
+    from src.models.models import LeNet5, CNN, LeNet, CNNcifar
     from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results, read_from_file, parse_run
     from data.data import Data
     from src.strategy import CustomFedAvg
@@ -21,19 +21,22 @@ if __name__ == '__main__':
     ### Configurations
 
     # Federated learning configurations
-    num_clients = 10
-    num_rounds = 10
+    num_clients = 1
+    num_rounds = 1
 
     # Model configurations
     epochs = 1
-    net = LeNet()
+    net = CNNcifar()
+    optimizer = torch.optim.Adam
+    lr = 0.004
     criterion = torch.nn.CrossEntropyLoss()
 
     # Data configurations
     batch_size = 'full'
     val_test_batch_size = 256
     val_size = 0.5 # 50% of the data is used for validation (we use one image for training and one for validation)
-    partitioner = 25000 # 2 images per partition; one for validation and one for training
+    partitioner = int(12500/2)
+    
     
     # General configurations
     seed = 42
@@ -76,7 +79,9 @@ if __name__ == '__main__':
                      num_cpus=num_cpus,
                      num_gpus=num_gpus,
                      strategy=strategy,
-                     criterion=criterion
+                     criterion=criterion,
+                     optim_method=optimizer,
+                     lr=lr,
                      )
 
     run_path = sim.run_simulation()

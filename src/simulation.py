@@ -40,6 +40,7 @@ class Simulation:
                  strategy: Strategy = FedAvg(),
                  criterion = None,
                  optim_method = None,
+                 lr: float = 0.001,
                  ) -> None:
         
         # Model
@@ -53,7 +54,7 @@ class Simulation:
 
         # Ensure optimizer is properly initialized
         self._optim_method = optim_method if optim_method else torch.optim.Adam
-        self._optimizer = self._optim_method(self._net.parameters())
+        self._optimizer = self._optim_method(self._net.parameters(), lr=lr)
 
         # Training parameters
         self._epochs = epochs

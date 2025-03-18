@@ -9,6 +9,7 @@ from typing import List, Tuple, Union
 from pathlib import Path
 from time import time 
 import json
+from tqdm import tqdm
 
 
 torch.manual_seed(42)
@@ -91,7 +92,10 @@ def serialize_parameters(net: torch.nn.Module, parameters: List[np.ndarray]) -> 
 
 def deserialize_parameters(parameters_record: dict) -> List[torch.Tensor]:
     # Convert JSON-compatible lists directly to PyTorch tensors
-    return [torch.tensor(v).cpu().detach() for v in parameters_record.values()]
+    return [torch.tensor(v).detach() for v in parameters_record.values()]
+
+def dict_to_list_of_tensors(parameters_dict: dict, device: str) -> List[torch.Tensor]:
+    return  [param.clone().to(device) for param in parameters_dict.values()]
 
 def dict_list_to_dict_tensor(parameters_record: dict) -> dict:
     # return {k: torch.tensor(v) for k, v in parameters_record.items()}
@@ -148,7 +152,7 @@ def parse_run(run_path: Union[str, Path]) -> pd.DataFrame:
         }
         
         # Loop through all of the parameter files
-        for parameters_file in parameters_files:
+        for parameters_file in tqdm(parameters_files, desc="Processing parameter files"):
             run_parameters = read_from_file(parameters_path + parameters_file) # Not sure this works!
             for training in run_parameters:
                 data['Server Round'].append(training['run_info']['server_round'])
@@ -325,7 +329,6 @@ def plot_reconstruction(ground_truth_images: torch.Tensor, reconstructed_images:
     # Adjust layout for better spacing
     plt.tight_layout()
     plt.show()
-
 
 def plot_loss(history_loss:list):
     '''

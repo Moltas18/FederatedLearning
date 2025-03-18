@@ -30,6 +30,7 @@ class Data:
                                     partitioners={"train": self._partitioner},
                                     seed=self._seed)
         
+        
         # Create test loader before partitioning the data, so that the test data is the same for all partitions
         self.create_test_loader()
 

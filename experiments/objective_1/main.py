@@ -9,7 +9,7 @@ if __name__ == '__main__':
 
     # Import local modules
     from src.simulation import Simulation
-    from src.models.models import LeNet5, CNN 
+    from src.models.CNNcifar import CNNcifar
     from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results
     from data.data import Data
     from src.strategy import CustomFedAvg
@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
     # Model configurations
     epochs = 1
-    net = LeNet5()
+    net = CNNcifar()
     criterion = torch.nn.CrossEntropyLoss()
 
     # Data configurations

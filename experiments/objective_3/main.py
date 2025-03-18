@@ -17,7 +17,7 @@ if __name__ == '__main__':
     from src.plots import plot_reconstruction
     from src.attack.utils import ParameterDifference, GradientApproximation
     from data.data import Data
-    from src.models.models import LeNet5, LeNet, CNNcifar
+    from src.models.CNNcifar import CNNcifar
     from src.attack.SME import SME
     from src.attack.dlMalte import DLMALTE
     from src.attack.dlm_old import Dlm

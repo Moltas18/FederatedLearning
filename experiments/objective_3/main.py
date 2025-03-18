@@ -19,10 +19,10 @@ if __name__ == '__main__':
     from data.data import Data
     from src.models.CNNcifar import CNNcifar
     from src.attack.SME import SME
-    from src.attack.dlMalte import DLMALTE
-    from src.attack.dlm_old import Dlm
+    from src.metrics.metrics import SSIM, LPIPS, PSNR, MSE
 
-    run_path = 'results/2025-03-17/15-12-20/'
+
+    run_path = 'results/2025-03-18/13-46-05/'
     df = parse_run(run_path = run_path)
     run_idx = 0
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     eta = 1
     beta = 0.001
-    iters = 10
+    iters = 1000
     lr_decay = False
     predicted_images, true_images, true_labels =  sme.reconstruction(eta,
                                                                     beta,
@@ -98,5 +98,23 @@ if __name__ == '__main__':
     # Detach, clone, and denormalize images, this should probably be done outside!
     ground_truth_images = denormalize(true_images.clone().detach())
     reconstructed_images = denormalize(predicted_images.clone().detach())
+    
+    # Calculate SSIM score between ground truth and predicted images
+    ssim_value = SSIM(reconstructed_images, ground_truth_images)
+    print(f"SSIM between reconstructed and ground truth images: {ssim_value}")
+    
+    # Calculate LPIPS score between ground truth and predicted images
+    lpips_value = LPIPS(predicted_images, true_images)
+    print(f"LPIPS score between predicted and ground truth images: {lpips_value}")
+
+    # Calculate PSNR score between ground truth and predicted images
+    psnr_value = PSNR(predicted_images, true_images)
+    print(f"PSNR score between predicted and ground truth images: {psnr_value}")
+
+    # Calculate MSE score between ground truth and predicted images
+    mse_value = MSE(predicted_images, true_images)
+    print(f"MSE score between predicted and ground truth images: {mse_value}")
+
+
     
     plot_reconstruction(ground_truth_images=ground_truth_images, reconstructed_images=reconstructed_images)

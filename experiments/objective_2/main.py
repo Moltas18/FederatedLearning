@@ -14,33 +14,35 @@ if __name__ == '__main__':
     # Import local modules
     from src.simulation import Simulation
     from src.models.CNNcifar import CNNcifar
-
-    from src.utils import fit_weighted_average, eval_weighted_average, read_from_file, parse_run
+    from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results, read_from_file, parse_run, set_global_seed
     from data.data import Data
     from src.strategy import CustomFedAvg
 
+    # Initialize seed
+    seed = 42
+    set_global_seed(seed=seed)
+    
     ### Configurations
 
     # Federated learning configurations
-    num_clients = 1
-    num_rounds = 1
+    num_clients = 5
+    num_rounds = 5
 
     # Model configurations
     epochs = 1
     net = CNNcifar()
-    optimizer = torch.optim.Adam
+    optimizer = torch.optim.SGD
     lr = 0.004
     criterion = torch.nn.CrossEntropyLoss()
 
     # Data configurations
+    partitioner = num_clients # Number of partitions to make, should almost always be kept this way!
     batch_size = 'full'
-    val_test_batch_size = 256
-    val_size = 0.5 # 50% of the data is used for validation (we use one image for training and one for validation)
-    partitioner = int(12500/2)
-    
+    val_size = 0.5 # 50% of the data is used for validation
+    training_partition_size = 8 # This is the size of the full datasets which the clients will TRAIN on.
+    partition_size = training_partition_size*2 # Trains on half of the images and validates on the other half.
     
     # General configurations
-    seed = 42
     num_gpus = 1/num_clients
     num_cpus = 1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -67,9 +69,9 @@ if __name__ == '__main__':
 
     data = Data(batch_size=batch_size,
                 partitioner=partitioner,
+                partition_size=partition_size,
                 seed=seed,
-                val_size=val_size,
-                val_test_batch_size=val_test_batch_size)
+                val_size=val_size)
 
     sim = Simulation(net=net,
                      data=data,
@@ -86,3 +88,4 @@ if __name__ == '__main__':
                      )
 
     run_path = sim.run_simulation()
+    print(run_path)

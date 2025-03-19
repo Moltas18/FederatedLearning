@@ -8,7 +8,6 @@ class DummyClient:
                  device: str,
                  initial_parameters: dict):
         
-
         self._model = model.to(device)
         self._criterion = criterion()
         self._device = device
@@ -26,14 +25,7 @@ class DummyClient:
 
     def compute_gradients(self, x: torch.Tensor, y: torch.Tensor):
         '''Computes the gradients of the loss w.r.t the model parameters and input x'''
-        # self._model.eval()  # Ensure the model is in evaluation mode
-        # x, y = x.to(self._device), y.to(self._device)
-
-        
-        # # Enable gradient computation for x
-        # x.requires_grad = True  
-
-        # Forward pass
+    
         outputs = self._forward(x)
         loss = self._loss(outputs, y)
 

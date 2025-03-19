@@ -2,7 +2,6 @@
 This file can be used to generate parameters. Analysis is done in a seperate file.
 '''
 
-
 import sys
 import os
 import torch
@@ -13,17 +12,25 @@ if __name__ == '__main__':
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
     # Import local modules
-    from src.utils import parse_run, deserialize_parameters, read_from_file, get_filenames, dict_list_to_dict_tensor, set_parameters, denormalize
-    from src.plots import plot_reconstruction
+    from src.utils import parse_run, dict_list_to_dict_tensor, set_parameters, denormalize, set_global_seed
     from src.attack.utils import ParameterDifference, GradientApproximation
+    from src.plots import plot_reconstruction
     from data.data import Data
     from src.models.CNNcifar import CNNcifar
     from src.attack.SME import SME
     from src.metrics.metrics import SSIM, LPIPS, PSNR, MSE
 
+    # Initialize seed
+    seed = 42
+    set_global_seed(seed=seed)
 
-    run_path = 'results/2025-03-18/13-46-05/'
+    #################################################################################################################
+    #                           PARSE WIEGHTS, HYPER PARAMETERS AND DATA CONFIGURATIONS                             #
+    #################################################################################################################
+    run_path = r'C:\Users\Admin\Documents\github\FederatedLearning\results\2025-03-18\15-29-39\\'
     df = parse_run(run_path = run_path)
+
+    # Pick a run of a client
     run_idx = 0
 
     ### Basic example usage ###
@@ -38,66 +45,64 @@ if __name__ == '__main__':
     lr = run_series['Learning Rate']
     partition_id = run_series['Partition ID']
 
-    ### Data configurations
-    batch_size = 'full'
-    val_test_batch_size = 256
-    val_size = 0.5 # 50% of the data is used for validation (we use one image for training and one for validation)
-    partitioner = int(12500/2)
-    seed = 42
-
-    data = Data(batch_size=batch_size,
-                partitioner=partitioner,
-                seed=seed,
-                val_size=val_size,
-                val_test_batch_size=val_test_batch_size)
+    data = Data(
+                batch_size=run_series['Data Batch Size'],
+                partitioner=run_series['Partitioner'],
+                partition_size=run_series['Partition Size'],
+                dataset=run_series['Dataset'],
+                seed=run_series['Seed'],
+                include_test_set=run_series['Include Test Set'],
+                val_size=run_series['Validation Size'],
+                val_test_batch_size=run_series['Val/Test Batch Size'],
+                normalization_means=run_series['Normalization Means'],
+                normalization_stds=run_series['Normalization Stds']
+                )
     
-    # W0, WT = deserialize_parameters(initial_params), deserialize_parameters(updated_params)
-    
-    # comperator = ParameterDifference(W0=W0, W1=WT)
-    # comperator.plot_difference()
-
     # Load the image of the selected partition
     trainloader, _, _ = data.load_datasets(partition_id=partition_id)
-    # batch = next(iter(trainloader))
-    # x = batch['img']
-    # y = batch['label']
-
-    # plot_reconstruction(gt_image, recon_image)
+    
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    global_params = dict_list_to_dict_tensor(initial_params)
+    initial_params = dict_list_to_dict_tensor(initial_params)
     updated_params = dict_list_to_dict_tensor(updated_params)
     
-    # Attack parameters
-    alpha = 0.5
-    mean_std = torch.tensor([0.5, 0.5, 0.5], device=device)
-    lamb = 0.01
+    #################################################################################################################
+    #                                           RUN THE DL ATTACK                                                   #
+    #################################################################################################################
 
+    # SME Hyperparameters
+    alpha = 0.5
+    lamb = 0.01
+    eta = 1
+    beta = 0.001
+    iters = 100
+    lr_decay = False
+
+    # Victim Model
     net = CNNcifar
 
+    # Initialize an instance of the attack class
     sme = SME(
         trainloader=trainloader,
         net=net,
-        w0=global_params, 
+        w0=initial_params, 
         wT=updated_params,
         device=device,
         alpha=alpha,
-        mean_std=mean_std,
+        mean_std=run_series['Normalization Means'],
         lamb=lamb
     )
 
-    eta = 1
-    beta = 0.001
-    iters = 1000
-    lr_decay = False
+    # Perform the reconstruction
+
     predicted_images, true_images, true_labels =  sme.reconstruction(eta,
                                                                     beta,
                                                                     iters,
                                                                     lr_decay)
     
     # Detach, clone, and denormalize images, this should probably be done outside!
-    ground_truth_images = denormalize(true_images.clone().detach())
-    reconstructed_images = denormalize(predicted_images.clone().detach())
+    ground_truth_images = denormalize(true_images.clone().detach(), run_series['Normalization Means'], run_series['Normalization Stds'])
+    reconstructed_images = denormalize(predicted_images.clone().detach(), run_series['Normalization Means'], run_series['Normalization Stds'])
     
     # Calculate SSIM score between ground truth and predicted images
     ssim_value = SSIM(reconstructed_images, ground_truth_images)

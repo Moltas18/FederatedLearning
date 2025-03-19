@@ -19,13 +19,6 @@ from src.utils import timer, write_to_file
 from src.client_app import FlowerClient, get_parameters, set_parameters
 from data.data import Data
 
-np.random.seed(42)
-torch.manual_seed(42)
-torch.cuda.manual_seed(42)
-torch.cuda.manual_seed_all(42)  # If using multi-GPU
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-
 class Simulation:
     
     def __init__(self,
@@ -129,10 +122,14 @@ class Simulation:
                       path=self.save_path,
                       filename='run_config')
         
+        data_dict = self._data.get_config_dict()
+        write_to_file(data=data_dict,
+                      path=self.save_path,
+                      filename='data_config')
+        
         # Add the path to the strategy
         self._strategy.save_path = self.save_path
 
-        
         # Create the ClientApp
         client = ClientApp(client_fn=self.client_fn)
         # Create the ServerApp

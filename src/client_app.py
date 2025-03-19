@@ -10,14 +10,6 @@ import torchmetrics
 from torchmetrics.classification import Accuracy
 from src.utils import write_to_file, serialize_parameters, deserialize_parameters, get_parameters, set_parameters
 
-np.random.seed(42)
-torch.manual_seed(42)
-torch.cuda.manual_seed(42)
-torch.cuda.manual_seed_all(42)  # If using multi-GPU
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-
-
 def get_gradients(net) -> List[np.ndarray]:
     return [val.grad.cpu().numpy() for _, val in net.named_parameters() if val.grad is not None]
 

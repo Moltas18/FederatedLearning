@@ -10,32 +10,48 @@ if __name__ == '__main__':
     # Import local modules
     from src.simulation import Simulation
     from src.models.CNNcifar import CNNcifar
-    from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results
+    from src.models.LeNet5 import LeNet5
+    from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results, set_global_seed
     from data.data import Data
     from src.strategy import CustomFedAvg
+
+    # Initialize seed, the set_global_seed function handles seeds in python, torch and numpy but not flower directly.
+    seed = 42
+    set_global_seed(seed=seed)
 
     ### Configurations
 
     # Federated learning configurations
-    num_clients = 11
+    num_clients = 1
     num_rounds = 1
 
     # Model configurations
     epochs = 1
-    net = CNNcifar()
+    net = LeNet5()
     criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam
+    lr = 0.001
 
     # Data configurations
     batch_size = 'full'
     val_test_batch_size = 256
     val_size = 0.2
     partitioner = num_clients
+    partition_size = 128 #Max
 
     # General configurations
     seed = 42
     num_gpus = 1/num_clients
     num_cpus = 1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    
+    # Save parameters
+    save_parameters = False
+
+    # Fit config function. Mainly used to save parameters
+    def fit_config(server_round: int) -> dict:
+        '''this function is called before the fit function in FlowerClient to generate the configuration for training'''
+        return {"save_parameters": save_parameters, "server_round": server_round}
     
     # Create FedAvg strategy
     strategy = CustomFedAvg(
@@ -45,14 +61,15 @@ if __name__ == '__main__':
         min_evaluate_clients=num_clients,  # Never sample less than 10 clients for evaluation
         min_available_clients=num_clients,  # Wait until all 10 clients are available before training
         evaluate_metrics_aggregation_fn=eval_weighted_average, # function for aggregating evaluation metrics (e.g., accuracy)
-        fit_metrics_aggregation_fn=fit_weighted_average # function for aggregating fit metrics (e.g., train loss, train accuracy)
+        fit_metrics_aggregation_fn=fit_weighted_average, # function for aggregating fit metrics (e.g., train loss, train accuracy)
+        on_fit_config_fn=fit_config # function for generating training configuration which saves parameters
     )
 
     data = Data(batch_size=batch_size,
                 partitioner=partitioner,
+                partition_size=partition_size,
                 seed=seed,
-                val_size=val_size,
-                val_test_batch_size=val_test_batch_size)
+                val_size=val_size)
 
     sim = Simulation(net=net,
                      data=data,
@@ -63,7 +80,9 @@ if __name__ == '__main__':
                      num_cpus=num_cpus,
                      num_gpus=num_gpus,
                      strategy=strategy,
-                     criterion=criterion
+                     criterion=criterion,
+                     optim_method=optimizer,
+                     lr=lr,
                      )
 
     run_path = sim.run_simulation()

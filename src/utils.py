@@ -322,4 +322,3 @@ def denormalize(img: torch.Tensor,
     mean = torch.tensor(means, device=device).view(3, 1, 1)
     std = torch.tensor(stds, device=device).view(3, 1, 1)
     return img * std + mean  # Reverse normalization
-    

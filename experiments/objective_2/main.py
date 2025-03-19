@@ -14,7 +14,6 @@ if __name__ == '__main__':
     # Import local modules
     from src.simulation import Simulation
     from src.models.CNNcifar import CNNcifar
-
     from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results, read_from_file, parse_run, set_global_seed
     from data.data import Data
     from src.strategy import CustomFedAvg

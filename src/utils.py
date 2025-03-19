@@ -10,13 +10,10 @@ from pathlib import Path
 from time import time 
 import json
 from tqdm import tqdm
+from typing import Union, List, Tuple, Sequence
+import random
 
 
-torch.manual_seed(42)
-torch.cuda.manual_seed(42)
-torch.cuda.manual_seed_all(42)  # If using multi-GPU
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
 
 def timer(func):
     """
@@ -42,6 +39,16 @@ def timer(func):
         return result
 
     return wrap_func
+
+def set_global_seed(seed):
+    random.seed(seed)  # Python's random module
+    np.random.seed(seed)  # NumPy
+    torch.manual_seed(seed)  # PyTorch (CPU)
+    torch.cuda.manual_seed(seed)  # PyTorch (GPU)
+    torch.cuda.manual_seed_all(seed)  # PyTorch (all GPUs)
+    torch.backends.cudnn.deterministic = True  # Ensure deterministic behavior
+    torch.backends.cudnn.benchmark = False  # Disable auto-tuning
+    torch.use_deterministic_algorithms(True)
 
 def eval_weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     '''
@@ -132,9 +139,13 @@ def get_filenames(directory: Union[str, Path]) -> List[str]:
 
 def parse_run(run_path: Union[str, Path]) -> pd.DataFrame:
 
-        # Read config
-        config_path = run_path + 'run_config.jsonl'
-        config = read_from_file(config_path)[0]
+        # Read run_config
+        run_config_path = run_path + 'run_config.jsonl'
+        run_config = read_from_file(run_config_path)[0]
+        
+        # Read data config
+        data_config_path = run_path + 'data_config.jsonl'
+        data_config = read_from_file(data_config_path)[0]
 
         # Get the file names of the parameters saving (from each client)
         parameters_path = run_path + 'parameters/'
@@ -144,7 +155,7 @@ def parse_run(run_path: Union[str, Path]) -> pd.DataFrame:
         data = {
             'Server Round' : [],
             'Client ID': [],
-            'Batch Size': [],
+            'Actual Batch Size': [],
             'Num Batches': [],
             'Partition ID': [],
             'Initial Parameters': [],
@@ -157,7 +168,7 @@ def parse_run(run_path: Union[str, Path]) -> pd.DataFrame:
             for training in run_parameters:
                 data['Server Round'].append(training['run_info']['server_round'])
                 data['Client ID'].append(training['run_info']['client_id'])
-                data['Batch Size'].append(training['run_info']['batch_size'])
+                data['Actual Batch Size'].append(training['run_info']['batch_size']) # This is the actual batch size for this specific round!
                 data['Num Batches'].append(training['run_info']['num_batches'])
                 data['Partition ID'].append(training['run_info']['node_config']['partition-id'])
                 data['Initial Parameters'].append(training['parameters']['parameters_before_training'])
@@ -165,13 +176,26 @@ def parse_run(run_path: Union[str, Path]) -> pd.DataFrame:
 
         # Create dataframe
         df = pd.DataFrame(data)
-        df['Epochs'] = config['epochs']
-        df['Net'] = config['net']
-        df['Num Clients'] = config['num_clients']
-        df['Total Rounds'] = config['num_rounds']
-        df['Optimizer'] = config['optim_method']
-        df['Learning Rate'] = config['learning_rate']
-        
+
+        # Add info from the run_config
+        df['Epochs'] = run_config['epochs']
+        df['Net'] = run_config['net']
+        df['Num Clients'] = run_config['num_clients']
+        df['Total Rounds'] = run_config['num_rounds']
+        df['Optimizer'] = run_config['optim_method']
+        df['Learning Rate'] = run_config['learning_rate']
+
+        # Add info from the data_config. This info will be used to create a new instance of the Data class.
+        df['Dataset'] = data_config['dataset']
+        df['Data Batch Size'] = data_config['batch_size']
+        df['Val/Test Batch Size'] = data_config['val_test_batch_size']
+        df['Partitioner'] = data_config['partitioner']
+        df['Partition Size'] = data_config['partition_size']
+        df['Seed'] = data_config['seed']
+        df['Validation Size'] = data_config['val_size']
+        df['Include Test Set'] = data_config['include_test_set']
+        df['Normalization Means'] = [data_config['normalization_means']] * len(df)
+        df['Normalization Stds'] = [data_config['normalization_stds']] * len(df)  
         return df
 
 def plot_image_samples(images: torch.Tensor) -> None: 
@@ -288,9 +312,14 @@ def plot_run_results(metrics_path: str, config_path: str) -> None:
     plt.tight_layout()
     plt.show()
 
-def denormalize(img):
-        device = img.device
-        mean = torch.tensor([0.5, 0.5, 0.5], device=device).view(3, 1, 1)
-        std = torch.tensor([0.5, 0.5, 0.5], device=device).view(3, 1, 1)
-        return img * std + mean  # Reverse normalization
+def denormalize(img: torch.Tensor,
+                means: Sequence[float],
+                stds: Sequence[float]):
+    '''
+    Denormalizes the image (tensor) with respect to the means and stds.
+    '''
+    device = img.device
+    mean = torch.tensor(means, device=device).view(3, 1, 1)
+    std = torch.tensor(stds, device=device).view(3, 1, 1)
+    return img * std + mean  # Reverse normalization
     

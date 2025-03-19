@@ -21,12 +21,6 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from typing import List
 
-torch.manual_seed(42)
-torch.cuda.manual_seed(42)
-torch.cuda.manual_seed_all(42)  # If using multi-GPU
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-
 class GradientApproximation:
     def __init__(self, W0: List[torch.Tensor], W1: List[torch.Tensor], lr: float, epochs: int):
         self.W0 = W0

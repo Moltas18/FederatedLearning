@@ -23,8 +23,8 @@ class Data:
                  include_test_set = False,
                  val_size: float = 0.5,
                  val_test_batch_size: Union[int, np.integer, torch.Tensor]=64,
-                 normalization_means: Sequence[float] = (0.5, 0.5, 0.5),
-                 normalization_stds: Sequence[float] = (0.5, 0.5, 0.5)
+                 normalization_means: Sequence[float] =  (0.4914, 0.4822, 0.4465),
+                 normalization_stds: Sequence[float] = (0.247, 0.243, 0.261)
                  ) -> None:
         
         self.dataset = dataset
@@ -95,7 +95,7 @@ class Data:
         """Apply PyTorch transforms to the dataset."""
         pytorch_transforms = transforms.Compose([
             transforms.ToTensor(), 
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
         ])
 
         batch["img"] = [pytorch_transforms(img) for img in batch["img"]]
@@ -169,6 +169,7 @@ if __name__ == '__main__':
     # Add the root directory to the sys.path
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
+    from src.utils import denormalize
     d = Data(
         batch_size=1,
         partitioner= 10,
@@ -181,3 +182,8 @@ if __name__ == '__main__':
     print(f"Number of samples in the training dataset: {len(trainloader.dataset)}")
     print(f"Number of samples in the validation dataset: {len(valloader.dataset)}")
 
+    x = next(iter(trainloader))
+    print(x)
+    # print(x['img'])
+    # x_ = denormalize(x['img'],(0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
+    # print(x_)

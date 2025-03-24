@@ -22,22 +22,22 @@ if __name__ == '__main__':
     ### Configurations
 
     # Federated learning configurations
-    num_clients = 1
+    num_clients = 10
     num_rounds = 1
 
     # Model configurations
     epochs = 1
-    net = LeNet5()
+    net = CNNcifar()
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam
-    lr = 0.001
+    optimizer = torch.optim.SGD
+    lr = 0.004
 
     # Data configurations
     batch_size = 'full'
     val_test_batch_size = 256
     val_size = 0.2
     partitioner = num_clients
-    partition_size = 128 #Max
+    partition_size = 5000 #Max
 
     # General configurations
     seed = 42

@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
     # Import local modules
     from src.utils import parse_run, dict_list_to_dict_tensor, set_parameters, denormalize, set_global_seed
-    from src.attack.utils import ParameterDifference, GradientApproximation
+    from src.attack.utils import ParameterDifference, GradientApproximation, psnr
     from src.plots import plot_reconstruction
     from data.data import Data
     from src.models.CNNcifar import CNNcifar
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     #################################################################################################################
     #                           PARSE WIEGHTS, HYPER PARAMETERS AND DATA CONFIGURATIONS                             #
     #################################################################################################################
-    run_path = r'C:\Users\Admin\Documents\github\FederatedLearning\results\2025-03-18\15-29-39\\'
+    run_path = r'C:\Users\Admin\Documents\github\FederatedLearning\results\2025-03-24\14-08-32\\'
     df = parse_run(run_path = run_path)
 
     # Pick a run of a client
@@ -75,8 +75,8 @@ if __name__ == '__main__':
     lamb = 0.01
     eta = 1
     beta = 0.001
-    iters = 100
-    lr_decay = False
+    iters = 1000
+    lr_decay = True
 
     # Victim Model
     net = CNNcifar
@@ -90,7 +90,7 @@ if __name__ == '__main__':
         device=device,
         alpha=alpha,
         mean_std=run_series['Normalization Means'],
-        lamb=lamb
+        lamb=lamb, 
     )
 
     # Perform the reconstruction
@@ -99,27 +99,51 @@ if __name__ == '__main__':
                                                                     beta,
                                                                     iters,
                                                                     lr_decay)
+
     
-    # Detach, clone, and denormalize images, this should probably be done outside!
+
+    #################################################################################################################
+    #                                   Process the results and save to JSON                                        #
+    #################################################################################################################
+
+
+    # Detach, clone, and denormalize images
     ground_truth_images = denormalize(true_images.clone().detach(), run_series['Normalization Means'], run_series['Normalization Stds'])
     reconstructed_images = denormalize(predicted_images.clone().detach(), run_series['Normalization Means'], run_series['Normalization Stds'])
-    
-    # Calculate SSIM score between ground truth and predicted images
-    ssim_value = SSIM(reconstructed_images, ground_truth_images)
-    print(f"SSIM between reconstructed and ground truth images: {ssim_value}")
-    
-    # Calculate LPIPS score between ground truth and predicted images
-    lpips_value = LPIPS(predicted_images, true_images)
-    print(f"LPIPS score between predicted and ground truth images: {lpips_value}")
+    plot_reconstruction(ground_truth_images=ground_truth_images, reconstructed_images=reconstructed_images)
+
+    # # Now, we fix them into the interval [0,1]
+    # ground_truth_images /= 255.0
+    # reconstructed_images /= 255.0
 
     # Calculate PSNR score between ground truth and predicted images
-    psnr_value = PSNR(predicted_images, true_images)
-    print(f"PSNR score between predicted and ground truth images: {psnr_value}")
+    psnr_value = PSNR(ground_truth=ground_truth_images, output=reconstructed_images)
+    print(f"PSNR FEDLAD: {psnr_value}")
 
-    # Calculate MSE score between ground truth and predicted images
-    mse_value = MSE(predicted_images, true_images)
-    print(f"MSE score between predicted and ground truth images: {mse_value}")
+    psnr_res = psnr(data=ground_truth_images, rec=reconstructed_images, sort=True)
+    print(f"PSNR from SME: {psnr_res}")
+ 
+    # # Save the reconstructed and ground truth images 
+    # torch.save(ground_truth_images, run_path + 'ground_truth_images.pt')
+    # torch.save(reconstructed_images, run_path + 'reconstructed_images.pt')
+    
+    # loaded_tensor = torch.load('tensor.pt')
+    # print(loaded_tensor)  # Output: tensor([1., 2.])    
+
+    # # Calculate SSIM score between ground truth and predicted images
+    # ssim_value = SSIM(reconstructed_images, ground_truth_images)
+    # print(f"SSIM between reconstructed and ground truth images: {ssim_value}")
+    
+    # # Calculate LPIPS score between ground truth and predicted images
+    # lpips_value = LPIPS(predicted_images, true_images)
+    # print(f"LPIPS score between predicted and ground truth images: {lpips_value}")
+
+    
+
+    # # Calculate MSE score between ground truth and predicted images
+    # mse_value = MSE(predicted_images, true_images)
+    # print(f"MSE score between predicted and ground truth images: {mse_value}")
 
 
     
-    plot_reconstruction(ground_truth_images=ground_truth_images, reconstructed_images=reconstructed_images)
+    # plot_reconstruction(ground_truth_images=ground_truth_images, reconstructed_images=reconstructed_images)

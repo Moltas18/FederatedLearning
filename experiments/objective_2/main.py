@@ -14,7 +14,7 @@ if __name__ == '__main__':
     # Import local modules
     from src.simulation import Simulation
     from src.models.CNNcifar import CNNcifar
-    from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results, read_from_file, parse_run, set_global_seed
+    from src.utils import fit_weighted_average, eval_weighted_average, set_global_seed
     from data.data import Data
     from src.strategy import CustomFedAvg
 
@@ -25,11 +25,11 @@ if __name__ == '__main__':
     ### Configurations
 
     # Federated learning configurations
-    num_clients = 5
-    num_rounds = 5
+    num_clients = 1
+    num_rounds = 1
 
     # Model configurations
-    epochs = 1
+    epochs = 20
     net = CNNcifar()
     optimizer = torch.optim.SGD
     lr = 0.004
@@ -37,9 +37,9 @@ if __name__ == '__main__':
 
     # Data configurations
     partitioner = num_clients # Number of partitions to make, should almost always be kept this way!
-    batch_size = 'full'
+    batch_size = 10
     val_size = 0.5 # 50% of the data is used for validation
-    training_partition_size = 8 # This is the size of the full datasets which the clients will TRAIN on.
+    training_partition_size = 50 # This is the size of the full datasets which the clients will TRAIN on.
     partition_size = training_partition_size*2 # Trains on half of the images and validates on the other half.
     
     # General configurations

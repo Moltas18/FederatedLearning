@@ -48,7 +48,6 @@ def set_global_seed(seed):
     torch.cuda.manual_seed_all(seed)  # PyTorch (all GPUs)
     torch.backends.cudnn.deterministic = True  # Ensure deterministic behavior
     torch.backends.cudnn.benchmark = False  # Disable auto-tuning
-    torch.use_deterministic_algorithms(True)
 
 def eval_weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     '''

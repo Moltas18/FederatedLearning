@@ -25,9 +25,8 @@ if __name__ == '__main__':
     ### Configurations
 
     # Federated learning configurations
-    num_clients = 5
-    num_rounds = 5
-
+    num_clients = 1
+    num_rounds = 1
     # Model configurations
     epochs = 1
     net = CNNcifar()
@@ -39,7 +38,7 @@ if __name__ == '__main__':
     partitioner = num_clients # Number of partitions to make, should almost always be kept this way!
     batch_size = 'full'
     val_size = 0.5 # 50% of the data is used for validation
-    training_partition_size = 8 # This is the size of the full datasets which the clients will TRAIN on.
+    training_partition_size = 1 # This is the size of the full datasets which the clients will TRAIN on.
     partition_size = training_partition_size*2 # Trains on half of the images and validates on the other half.
     
     # General configurations
@@ -52,7 +51,7 @@ if __name__ == '__main__':
 
     # Fit config function. Mainly used to save parameters
     def fit_config(server_round: int) -> dict:
-        '''this function is called before the fit function in FlowerClient to generate the configuration for training'''
+        # '''this function is called before the fit function in FlowerClient to generate the configuration for training'''
         return {"save_parameters": save_parameters, "server_round": server_round}
     
     # Create FedAvg strategy

@@ -27,11 +27,11 @@ if __name__ == '__main__':
     #################################################################################################################
     #                           PARSE WIEGHTS, HYPER PARAMETERS AND DATA CONFIGURATIONS                             #
     #################################################################################################################
-    run_path = r'C:\Users\Admin\Documents\github\FederatedLearning\results\2025-03-18\15-29-39\\'
+    run_path = r'C:\Users\Admin\Documents\GitHub\FederatedLearning\results\2025-03-20\10-01-20\\'
     df = parse_run(run_path = run_path)
 
     # Pick a run of a client
-    run_idx = 0
+    run_idx = 1
 
     ### Basic example usage ###
     run_series = df.iloc[run_idx]

@@ -43,7 +43,7 @@ class SME:
         
         # THIS NEEDS TO BE REWRITTEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         for batch in trainloader:
-            img, l = batch['img'], batch['label']
+            img, l = batch['image'], batch['label']
             labels.append(l)
             data.append(img)
         self.data = torch.cat(data).to(self.device)
@@ -84,8 +84,8 @@ class SME:
 
         # Direction of the weight update.
         w1_w0 = []
-        for p0, p1 in zip(self.net0.parameters(), self.net1.parameters()):
-            w1_w0.append(p0.data - p1.data)
+        for w_0, w_t in zip(self.net0.parameters(), self.net1.parameters()):
+            w1_w0.append(w_0.data - w_t.data)
         norm = compute_norm(w1_w0)
         w1_w0 = [p / norm for p in w1_w0]
 
@@ -128,10 +128,8 @@ class SME:
             # Compute alpha's grad.
             if self.rec_alpha:
                 with torch.no_grad():
-                    for p, q, z in zip(self.net0.parameters(), self.net1.parameters(), _net.parameters()):
-                        self.alpha.grad += z.grad.mul(
-                            q.data - p.data
-                        ).sum()
+                    for w_0, w_t, z in zip(self.net0.parameters(), self.net1.parameters(), _net.parameters()):
+                        self.alpha.grad += z.grad.mul(w_0.data - w_t.data).sum()
                 if signed_grad:
                     self.alpha.grad.sign_()
 
@@ -143,7 +141,8 @@ class SME:
             if lr_decay:
                 scheduler.step()
                 alpha_scheduler.step()
-
+       
+        print(self.alpha)
         return self.x, self.data, self.labels
 
             

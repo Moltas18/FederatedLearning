@@ -11,6 +11,10 @@ from flwr_datasets.partitioner import Partitioner
 import numpy as np
 from typing import Union, Sequence
 from datasets import DatasetDict
+from datasets import load_dataset
+import matplotlib.pyplot as plt
+
+
 
 class Data:
 
@@ -18,7 +22,7 @@ class Data:
                  batch_size: Union[str, int, np.integer, torch.Tensor],
                  partitioner: Union[int, Partitioner],
                  partition_size: Union[int, np.integer, torch.Tensor]=None,
-                 dataset: str = "cifar10",
+                 dataset: str = "benjamin-paine/imagenet-1k-128x128", #korexyz/celeba-hq-256x256
                  seed: Union[int, np.integer] = 42,
                  include_test_set = False,
                  val_size: float = 0.5,
@@ -98,7 +102,7 @@ class Data:
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])
 
-        batch["img"] = [pytorch_transforms(img) for img in batch["img"]]
+        batch["image"] = [pytorch_transforms(images) for images in batch["image"]]
         return batch
 
     def _get_batch_size(self, partition_train_test):
@@ -178,6 +182,22 @@ if __name__ == '__main__':
 
     trainloader, valloader, testloader = d.load_datasets(partition_id=0)
 
+    for x in trainloader:
+        print(x)
+        unnormalized_image = x['image'] / 2 + 0.5  # Reverse normalization formula
+
+        # Convert tensor to NumPy array (from tensor shape [C, H, W] to [H, W, C] for plotting)
+        image_np = unnormalized_image.squeeze().permute(1, 2, 0).numpy()
+
+        # Plot the image
+        plt.imshow(image_np)
+        plt.axis('off')  # Hide axes
+        plt.show()
+
+
+
     print(f"Number of samples in the training dataset: {len(trainloader.dataset)}")
     print(f"Number of samples in the validation dataset: {len(valloader.dataset)}")
+
+    
 

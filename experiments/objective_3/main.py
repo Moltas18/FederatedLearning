@@ -6,13 +6,98 @@ import sys
 import os
 import torch
 
+
+# Function to run the SME attack
+def run_sme_attack(config, run_series, run_path, data):
+    """
+    Run the SME attack on all clients and save the results.
+
+    Args:
+        config (dict): Dictionary containing hyperparameters and configurations.
+        run_series (pd.Series): Series containing run configurations.
+        run_path (str): Path to save the results.
+        data (Data): Data object for loading datasets.
+    """
+    # Extract configurations
+    alpha = config["alpha"]
+    lamb = config["lamb"]
+    eta = config["eta"]
+    beta = config["beta"]
+    iters = config["iters"]
+    lr_decay = config["lr_decay"]
+    net = config["victim_model"]
+    device = config["device"]
+    filtered_df = config["filtered_df"]
+
+    for _, client in filtered_df.iterrows():
+        # Extract parameters for the client
+        initial_params, updated_params = client['Initial Parameters'], client['Updated Parameters']
+        initial_params = dict_list_to_dict_tensor(initial_params)
+        updated_params = dict_list_to_dict_tensor(updated_params)
+        partition_id = client['Partition ID']
+
+        # Load the data for the selected partition
+        trainloader, _, _ = data.load_datasets(partition_id=partition_id)
+
+        # Initialize the SME attack
+        sme = SME(
+            trainloader=trainloader,
+            net=net,
+            w0=initial_params,
+            wT=updated_params,
+            device=device,
+            alpha=alpha,
+            mean_std=run_series['Normalization Means'],
+            lamb=lamb,
+        )
+
+        # Perform the reconstruction
+        predicted_images, true_images, true_labels = sme.reconstruction(
+            eta=eta,
+            beta=beta,
+            iters=iters,
+            lr_decay=lr_decay
+        )
+
+        # Denormalize the images
+        predicted_images = denormalize(predicted_images, run_series['Normalization Means'], run_series['Normalization Stds'])  
+        true_images = denormalize(true_images, run_series['Normalization Means'], run_series['Normalization Stds'])
+        
+        # Serialize the reconstructed and true images
+        serialized_data = {
+            'predicted_images': predicted_images.clone().detach().cpu().tolist(),
+            'true_images': true_images.clone().detach().cpu().tolist(),
+            'true_labels': true_labels.clone().detach().cpu().tolist()
+        }
+
+        # Run info from the client
+        run_info = {
+            'server_round': client['Server Round'],
+            'client_id': client['Client ID'],  # Assuming 'Client ID' exists in the DataFrame
+            'partition_id': partition_id,
+            'batch_size': trainloader.batch_size,
+            'num_batches': len(trainloader),
+        }
+
+        # Combine run info and serialized data
+        combine_data = {
+            "run_info": run_info,
+            "reconstruction": serialized_data,
+        }
+        
+        # A new directory needs to be created where parameters JSONL-files are stored for each client
+        parameters_path = os.path.join(run_path, "reconstruction")
+        os.makedirs(parameters_path, exist_ok=True)
+        # We create one parameters-file per client inside the parameters directory
+        write_to_file(data=combine_data, path=parameters_path, filename=str(client['Client ID']))
+
 if __name__ == '__main__':
     
     # Add the root directory to the sys.path
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
     # Import local modules
-    from src.utils import parse_run, dict_list_to_dict_tensor, set_parameters, denormalize, set_global_seed
+    from src.utils import parse_run, dict_list_to_dict_tensor, set_parameters, denormalize, set_global_seed, write_to_file
     from src.attack.utils import ParameterDifference, GradientApproximation, psnr
     from src.plots import plot_reconstruction
     from data.data import Data
@@ -27,24 +112,12 @@ if __name__ == '__main__':
     #################################################################################################################
     #                           PARSE WIEGHTS, HYPER PARAMETERS AND DATA CONFIGURATIONS                             #
     #################################################################################################################
-    run_path = r'C:\Users\Admin\Documents\github\FederatedLearning\results\2025-03-24\14-08-32\\'
+    run_path = r'C:\Users\Admin\Documents\GitHub\FederatedLearning\results\2025-03-27\08-35-42\\'
     df = parse_run(run_path = run_path)
-
-    # Pick a run of a client
-    run_idx = 0
-
-    ### Basic example usage ###
-    run_series = df.iloc[run_idx]
-
-    print(run_series)
-    # Load the parameters from the first client, the round.
-    initial_params, updated_params = run_series['Initial Parameters'], run_series['Updated Parameters']
-
-    # Load hyperparameters from the first round
+    run_series = df.iloc[0]
+    # Load hyperparameters from the first round for all test as they are the same for all clients
     epochs = run_series['Epochs']
     lr = run_series['Learning Rate']
-    partition_id = run_series['Partition ID']
-
     data = Data(
                 batch_size=run_series['Data Batch Size'],
                 partitioner=run_series['Partitioner'],
@@ -57,93 +130,23 @@ if __name__ == '__main__':
                 normalization_means=run_series['Normalization Means'],
                 normalization_stds=run_series['Normalization Stds']
                 )
-    
-    # Load the image of the selected partition
-    trainloader, _, _ = data.load_datasets(partition_id=partition_id)
-    
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    
-    initial_params = dict_list_to_dict_tensor(initial_params)
-    updated_params = dict_list_to_dict_tensor(updated_params)
-    
-    #################################################################################################################
-    #                                           RUN THE DL ATTACK                                                   #
-    #################################################################################################################
-
-    # SME Hyperparameters
-    alpha = 0.5
-    lamb = 0.01
-    eta = 1
-    beta = 0.001
-    iters = 1000
-    lr_decay = True
-
-    # Victim Model
-    net = CNNcifar
-
-    # Initialize an instance of the attack class
-    sme = SME(
-        trainloader=trainloader,
-        net=net,
-        w0=initial_params, 
-        wT=updated_params,
-        device=device,
-        alpha=alpha,
-        mean_std=run_series['Normalization Means'],
-        lamb=lamb, 
-    )
-
-    # Perform the reconstruction
-
-    predicted_images, true_images, true_labels =  sme.reconstruction(eta,
-                                                                    beta,
-                                                                    iters,
-                                                                    lr_decay)
-
-    
 
     #################################################################################################################
-    #                                   Process the results and save to JSON                                        #
+    #                                           RUN THE DL ATTACK ON ALL CLIENTS                                    #
     #################################################################################################################
+    # Define hyperparameters and configurations
+    config = {
+        "alpha": 0.5,
+        "lamb": 0.01,
+        "eta": 1,
+        "beta": 0.001,
+        "iters": 1000,
+        "lr_decay": True,
+        "victim_model": CNNcifar,  # Victim Model
+        "device": 'cuda' if torch.cuda.is_available() else 'cpu',
+        "filtered_df": df,  # Filtered DataFrame (can be modified if needed)
+    }
 
+    # Call the function
+    run_sme_attack(config=config, run_series=run_series, run_path=run_path, data=data)
 
-    # Detach, clone, and denormalize images
-    ground_truth_images = denormalize(true_images.clone().detach(), run_series['Normalization Means'], run_series['Normalization Stds'])
-    reconstructed_images = denormalize(predicted_images.clone().detach(), run_series['Normalization Means'], run_series['Normalization Stds'])
-    plot_reconstruction(ground_truth_images=ground_truth_images, reconstructed_images=reconstructed_images)
-
-    # # Now, we fix them into the interval [0,1]
-    # ground_truth_images /= 255.0
-    # reconstructed_images /= 255.0
-
-    # Calculate PSNR score between ground truth and predicted images
-    psnr_value = PSNR(ground_truth=ground_truth_images, output=reconstructed_images)
-    print(f"PSNR FEDLAD: {psnr_value}")
-
-    psnr_res = psnr(data=ground_truth_images, rec=reconstructed_images, sort=True)
-    print(f"PSNR from SME: {psnr_res}")
- 
-    # # Save the reconstructed and ground truth images 
-    # torch.save(ground_truth_images, run_path + 'ground_truth_images.pt')
-    # torch.save(reconstructed_images, run_path + 'reconstructed_images.pt')
-    
-    # loaded_tensor = torch.load('tensor.pt')
-    # print(loaded_tensor)  # Output: tensor([1., 2.])    
-
-    # # Calculate SSIM score between ground truth and predicted images
-    # ssim_value = SSIM(reconstructed_images, ground_truth_images)
-    # print(f"SSIM between reconstructed and ground truth images: {ssim_value}")
-    
-    # # Calculate LPIPS score between ground truth and predicted images
-    # lpips_value = LPIPS(predicted_images, true_images)
-    # print(f"LPIPS score between predicted and ground truth images: {lpips_value}")
-
-    
-
-    # # Calculate MSE score between ground truth and predicted images
-    # mse_value = MSE(predicted_images, true_images)
-    # print(f"MSE score between predicted and ground truth images: {mse_value}")
-
-
-    
-    # plot_reconstruction(ground_truth_images=ground_truth_images, reconstructed_images=reconstructed_images)

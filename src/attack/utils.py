@@ -143,3 +143,18 @@ def save_figs(tensors, path, subdir=None, dataset=None):
         [i, tensor2image(tensors[i].detach().cpu().squeeze())] for i in range(len(tensors))
     ]
     save(imgs, path)
+
+def allign_images(ground_truth_images: torch.Tensor,
+                  reconstructed_images: torch.Tensor
+                  ):
+    
+    cost_matrix = []
+
+    for x_ in reconstructed_images:
+        cost_matrix.append(
+            [(x_ - d).square().mean().item() for d in ground_truth_images]
+        )
+    row_ind, col_ind = linear_sum_assignment(cost_matrix)
+    assert np.all(row_ind == np.arange(len(row_ind)))
+    ground_truth_images = ground_truth_images[col_ind]
+    return ground_truth_images, reconstructed_images

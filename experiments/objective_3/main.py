@@ -63,6 +63,10 @@ def run_sme_attack(config, run_series, run_path, data):
         predicted_images = denormalize(predicted_images, run_series['Normalization Means'], run_series['Normalization Stds'])  
         true_images = denormalize(true_images, run_series['Normalization Means'], run_series['Normalization Stds'])
         
+        # Align images with linnear sum assigment
+        true_images, predicted_images = allign_images(ground_truth_images=true_images,
+                                                      reconstructed_images=predicted_images)
+
         # Serialize the reconstructed and true images
         serialized_data = {
             'predicted_images': predicted_images.clone().detach().cpu().tolist(),
@@ -98,7 +102,7 @@ if __name__ == '__main__':
 
     # Import local modules
     from src.utils import parse_run, dict_list_to_dict_tensor, set_parameters, denormalize, set_global_seed, write_to_file
-    from src.attack.utils import ParameterDifference, GradientApproximation, psnr
+    from src.attack.utils import ParameterDifference, GradientApproximation, allign_images
     from src.plots import plot_reconstruction
     from data.data import Data
     from src.models.CNNcifar import CNNcifar

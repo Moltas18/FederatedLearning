@@ -5,10 +5,16 @@ This file can be used to generate parameters. Analysis is done in a seperate fil
 import sys
 import os
 import torch
-
+from tqdm import tqdm
+import pandas as pd
+from typing import List, Tuple, Union, AnyStr
+from pathlib import Path
 
 # Function to run the SME attack
-def run_sme_attack(config, run_series, run_path, data):
+def run_sme_attack(config: dict,
+                   run_df: pd.DataFrame,
+                   run_path: Union[str, Path],
+                   data):
     """
     Run the SME attack on all clients and save the results.
 
@@ -27,14 +33,15 @@ def run_sme_attack(config, run_series, run_path, data):
     lr_decay = config["lr_decay"]
     net = config["victim_model"]
     device = config["device"]
-    filtered_df = config["filtered_df"]
+    config_series = config["config_series"]
 
-    for _, client in filtered_df.iterrows():
+    # We loop 
+    for _, client_round in tqdm(run_df.iterrows(), total=len(run_df), desc="Running SME Attack"):
         # Extract parameters for the client
-        initial_params, updated_params = client['Initial Parameters'], client['Updated Parameters']
+        initial_params, updated_params = client_round['Initial Parameters'], client_round['Updated Parameters']
         initial_params = dict_list_to_dict_tensor(initial_params)
         updated_params = dict_list_to_dict_tensor(updated_params)
-        partition_id = client['Partition ID']
+        partition_id = client_round['Partition ID']
 
         # Load the data for the selected partition
         trainloader, _, _ = data.load_datasets(partition_id=partition_id)
@@ -47,7 +54,7 @@ def run_sme_attack(config, run_series, run_path, data):
             wT=updated_params,
             device=device,
             alpha=alpha,
-            mean_std=run_series['Normalization Means'],
+            mean_std=config_series['Normalization Means'],
             lamb=lamb,
         )
 
@@ -60,8 +67,8 @@ def run_sme_attack(config, run_series, run_path, data):
         )
 
         # Denormalize the images
-        predicted_images = denormalize(predicted_images, run_series['Normalization Means'], run_series['Normalization Stds'])  
-        true_images = denormalize(true_images, run_series['Normalization Means'], run_series['Normalization Stds'])
+        predicted_images = denormalize(predicted_images, config_series['Normalization Means'], config_series['Normalization Stds'])  
+        true_images = denormalize(true_images, config_series['Normalization Means'], config_series['Normalization Stds'])
         
         # Align images with linnear sum assigment
         true_images, predicted_images = allign_images(ground_truth_images=true_images,
@@ -76,11 +83,12 @@ def run_sme_attack(config, run_series, run_path, data):
 
         # Run info from the client
         run_info = {
-            'server_round': client['Server Round'],
-            'client_id': client['Client ID'],  # Assuming 'Client ID' exists in the DataFrame
+            'server_round': client_round['Server Round'],
+            'client_id': client_round['Client ID'],  # Assuming 'Client ID' exists in the DataFrame
             'partition_id': partition_id,
             'batch_size': trainloader.batch_size,
             'num_batches': len(trainloader),
+            'epochs' : client_round['Epochs']
         }
 
         # Combine run info and serialized data
@@ -93,7 +101,7 @@ def run_sme_attack(config, run_series, run_path, data):
         parameters_path = os.path.join(run_path, "reconstruction")
         os.makedirs(parameters_path, exist_ok=True)
         # We create one parameters-file per client inside the parameters directory
-        write_to_file(data=combine_data, path=parameters_path, filename=str(client['Client ID']))
+        write_to_file(data=combine_data, path=parameters_path, filename=str(client_round['Client ID']))
 
 if __name__ == '__main__':
     
@@ -101,13 +109,12 @@ if __name__ == '__main__':
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
     # Import local modules
-    from src.utils import parse_run, dict_list_to_dict_tensor, set_parameters, denormalize, set_global_seed, write_to_file
+    from src.utils import parse_run, dict_list_to_dict_tensor, denormalize, set_global_seed, write_to_file
     from src.attack.utils import ParameterDifference, GradientApproximation, allign_images
-    from src.plots import plot_reconstruction
     from data.data import Data
     from src.models.CNNcifar import CNNcifar
     from src.attack.SME import SME
-    from src.metrics.metrics import SSIM, LPIPS, PSNR, MSE
+
 
     # Initialize seed
     seed = 42
@@ -116,23 +123,25 @@ if __name__ == '__main__':
     #################################################################################################################
     #                           PARSE WIEGHTS, HYPER PARAMETERS AND DATA CONFIGURATIONS                             #
     #################################################################################################################
-    run_path = r'C:\Users\Admin\Documents\GitHub\FederatedLearning\results\2025-03-27\08-35-42\\'
-    df = parse_run(run_path = run_path)
-    run_series = df.iloc[0]
+    run_path = r'C:\Users\Admin\Documents\github\FederatedLearning\results\2025-03-28\15-01-49\\'
+    run_df = parse_run(run_path = run_path)
+    
     # Load hyperparameters from the first round for all test as they are the same for all clients
-    epochs = run_series['Epochs']
-    lr = run_series['Learning Rate']
+    config_series = run_df.iloc[0]
+    
+    epochs = config_series['Epochs']
+    lr = config_series['Learning Rate']
     data = Data(
-                batch_size=run_series['Data Batch Size'],
-                partitioner=run_series['Partitioner'],
-                partition_size=run_series['Partition Size'],
-                dataset=run_series['Dataset'],
-                seed=run_series['Seed'],
-                include_test_set=run_series['Include Test Set'],
-                val_size=run_series['Validation Size'],
-                val_test_batch_size=run_series['Val/Test Batch Size'],
-                normalization_means=run_series['Normalization Means'],
-                normalization_stds=run_series['Normalization Stds']
+                batch_size=config_series['Data Batch Size'],
+                partitioner=config_series['Partitioner'],
+                partition_size=config_series['Partition Size'],
+                dataset=config_series['Dataset'],
+                seed=config_series['Seed'],
+                include_test_set=config_series['Include Test Set'],
+                val_size=config_series['Validation Size'],
+                val_test_batch_size=config_series['Val/Test Batch Size'],
+                normalization_means=config_series['Normalization Means'],
+                normalization_stds=config_series['Normalization Stds']
                 )
 
     #################################################################################################################
@@ -148,9 +157,9 @@ if __name__ == '__main__':
         "lr_decay": True,
         "victim_model": CNNcifar,  # Victim Model
         "device": 'cuda' if torch.cuda.is_available() else 'cpu',
-        "filtered_df": df,  # Filtered DataFrame (can be modified if needed)
+        "config_series": config_series,  # Filtered DataFrame (can be modified if needed)
     }
 
     # Call the function
-    run_sme_attack(config=config, run_series=run_series, run_path=run_path, data=data)
+    run_sme_attack(config=config, run_df=run_df, run_path=run_path, data=data)
 

@@ -41,7 +41,6 @@ class SME:
         self.dataset = dataset
         data, labels = [], []
         
-        # THIS NEEDS TO BE REWRITTEN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         for batch in trainloader:
             img, l = batch['img'], batch['label']
             labels.append(l)

@@ -3,12 +3,12 @@ from torchmetrics.image import StructuralSimilarityIndexMeasure, LearnedPerceptu
 
 
 def SSIM(output,ground_truth):
-    metric = StructuralSimilarityIndexMeasure(data_range=1.0).cuda()
+    metric = StructuralSimilarityIndexMeasure(data_range=1.0)#.cuda()
     ssim =metric(output,ground_truth)
     return ssim.item()
 
 def LPIPS(output,ground_truth):
-    lpips = LearnedPerceptualImagePatchSimilarity(net_type='squeeze').cuda()
+    lpips = LearnedPerceptualImagePatchSimilarity(net_type='squeeze')#.cuda()
     fin_lpips = lpips(output,ground_truth)
     return fin_lpips
 

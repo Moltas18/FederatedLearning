@@ -70,18 +70,3 @@ if __name__ == '__main__':
     plot_reconstruction(
     ground_truth_images=true_images_tensor,
     reconstructed_images=predicted_image_tensor)
-
-        
-    #     #     reconstructed_images = temp_dict['reconstruction']['predicted_images']
-    #     #     ground_truth_images = temp_dict['reconstruction']['true_images']
-            
-    #     #     true_images_tensor= torch.tensor(reconstructed_images)
-    #     #     predicted_images_tensor = torch.tensor(ground_truth_images)
-
-    # # # Plot the reconstruction
-    
-            
-
-    # #     #     # Calculate SSIM score between ground truth and predicted images
-
-    # #     #     # plot_reconstruction(ground_truth_images=ground_truth_images, reconstructed_images=reconstructed_images)

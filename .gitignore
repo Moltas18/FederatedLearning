@@ -173,3 +173,10 @@ cython_debug/
 # Jsonl results files
 *.json
 *.jsonl
+
+# Pdf files
+*.pdf
+
+
+# Gif files
+*.gif

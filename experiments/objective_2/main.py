@@ -19,7 +19,7 @@ if __name__ == '__main__':
     from src.strategy import CustomFedAvg
 
     # Initialize seed
-    seed = 42
+    seed = 0
     set_global_seed(seed=seed)
     
     ### Configurations
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     num_rounds = 1
 
     # Model configurations
-    epochs = 20
+    epochs = 1
     net = CNNcifar()
     optimizer = torch.optim.SGD
     lr = 0.004
@@ -37,9 +37,9 @@ if __name__ == '__main__':
 
     # Data configurations
     partitioner = num_clients # Number of partitions to make, should almost always be kept this way!
-    batch_size = 10
+    batch_size = "full"
     val_size = 0.5 # 50% of the data is used for validation
-    training_partition_size = 50 # This is the size of the full datasets which the clients will TRAIN on.
+    training_partition_size = 1 # This is the size of the full datasets which the clients will TRAIN on.
     partition_size = training_partition_size*2 # Trains on half of the images and validates on the other half.
     
     # General configurations

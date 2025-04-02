@@ -9,6 +9,7 @@ from tqdm import tqdm
 import pandas as pd
 from typing import List, Tuple, Union, AnyStr
 from pathlib import Path
+import numpy as np
 
 # Function to run the SME attack
 def run_sme_attack(config: dict,
@@ -57,13 +58,19 @@ def run_sme_attack(config: dict,
             mean_std=config_series['Normalization Means'],
             lamb=lamb,
         )
-
+        # Perform the reconstruction
+        gif_filename = f"reconstruction_client_{client_round['Client ID']}.gif"  # Unique filename for each client
+        gif_path = os.path.join(run_path, "reconstruction", gif_filename) 
+        
         # Perform the reconstruction
         predicted_images, true_images, true_labels = sme.reconstruction(
             eta=eta,
             beta=beta,
             iters=iters,
-            lr_decay=lr_decay
+            lr_decay=lr_decay,
+            save_figure=True,
+            save_interval=1,
+            gif_path=gif_path,
         )
 
         # Denormalize the images
@@ -123,7 +130,7 @@ if __name__ == '__main__':
     #################################################################################################################
     #                           PARSE WIEGHTS, HYPER PARAMETERS AND DATA CONFIGURATIONS                             #
     #################################################################################################################
-    run_path = r'C:\Users\Admin\Documents\github\FederatedLearning\results\2025-03-28\15-01-49\\'
+    run_path = r'C:\Users\Admin\Documents\GitHub\FederatedLearning\results\2025-04-01\15-10-47\\'
     run_df = parse_run(run_path = run_path)
     
     # Load hyperparameters from the first round for all test as they are the same for all clients

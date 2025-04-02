@@ -18,7 +18,7 @@ class Data:
                  batch_size: Union[str, int, np.integer, torch.Tensor],
                  partitioner: Union[int, Partitioner],
                  partition_size: Union[int, np.integer, torch.Tensor]=None,
-                 dataset: str = "cifar10",
+                 dataset: str = "AnnantJain/aircraft",
                  seed: Union[int, np.integer] = 42,
                  include_test_set = False,
                  val_size: float = 0.5,
@@ -94,11 +94,17 @@ class Data:
     def apply_transforms(batch):
         """Apply PyTorch transforms to the dataset."""
         pytorch_transforms = transforms.Compose([
-            transforms.ToTensor(), 
+            transforms.Resize((256, 256)),
+            transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
         ])
 
-        batch["img"] = [pytorch_transforms(img) for img in batch["img"]]
+        # Convert images to tensors
+        batch["image"] = [pytorch_transforms(img) for img in batch["image"]]
+
+        # Map labels to numerical values and convert to tensors
+        label_to_index = {"aircraft": 0}  # Add mappings for all possible labels
+        batch["label"] = [torch.tensor(label_to_index[label]) for label in batch["label"]]
         return batch
 
     def _get_batch_size(self, partition_train_test):

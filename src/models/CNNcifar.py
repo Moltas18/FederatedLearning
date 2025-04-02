@@ -24,7 +24,7 @@ class CNNcifar(nn.Module):
             self.act,
             nn.AvgPool2d(kernel_size=2, stride=2),
         )
-        self.fc1 = nn.Linear(8192, 200)
+        self.fc1 = nn.Linear(524288, 200)
         self.fc2 = nn.Linear(200, num_classes)
 
     def forward(self, x):

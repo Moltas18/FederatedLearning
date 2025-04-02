@@ -22,7 +22,7 @@ if __name__ == '__main__':
     ### Configurations
 
     # Federated learning configurations
-    num_clients = 10
+    num_clients = 1
     num_rounds = 1
 
     # Model configurations

@@ -27,7 +27,7 @@ if __name__ == '__main__':
     #                           PARSE WIEGHTS, HYPER PARAMETERS AND DATA CONFIGURATIONS                             #
     #################################################################################################################
     
-    run_path = r'C:\Users\Admin\Documents\github\FederatedLearning\results\2025-03-28\15-01-49\\'
+    run_path = r'C:\Users\Admin\Documents\GitHub\FederatedLearning\results\2025-04-01\15-10-47\\'
     
     reconstructions_path = run_path + 'reconstruction/'
     reconstructions_files = get_filenames(reconstructions_path)

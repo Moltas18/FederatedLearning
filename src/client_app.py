@@ -23,7 +23,7 @@ def train(net, dataloader, epochs, device, optimizer, criterion) -> float:
         total_loss, total_samples = 0.0, 0
 
         for batch in dataloader:
-            images, labels = batch["img"].to(device), batch["label"].to(device)
+            images, labels = batch["image"].to(device), batch["label"].to(device)
             optimizer.zero_grad()
             outputs = net(images)
             loss = criterion(outputs, labels)
@@ -49,7 +49,7 @@ def test(net, dataloader, device, criterion):
 
     with torch.no_grad():
         for batch in dataloader:
-            images, labels = batch["img"].to(device), batch["label"].to(device)
+            images, labels = batch["image"].to(device), batch["label"].to(device)
             outputs = net(images)
             batch_loss = criterion(outputs, labels).item() * labels.size(0)  # Weighted loss
             

@@ -5,7 +5,8 @@ import os
 import copy
 from src.attack.utils import require_grad, prior_boundary, compute_norm, total_variation, save_args, save_figs, psnr
 from src.utils import set_parameters
-
+from PIL import Image
+import numpy as np
 
 class SME:
 
@@ -42,7 +43,7 @@ class SME:
         data, labels = [], []
         
         for batch in trainloader:
-            img, l = batch['img'], batch['label']
+            img, l = batch['image'], batch['label']
             labels.append(l)
             data.append(img)
         self.data = torch.cat(data).to(self.device)
@@ -63,7 +64,7 @@ class SME:
         # This is a trick (a sort of prior information) adopted from IG.
         prior_boundary(self.x, -self.mean / self.std, (1 - self.mean) / self.std)
 
-    def reconstruction(self, eta, beta, iters, lr_decay, signed_grad=False, save_figure=True):
+    def reconstruction(self, eta, beta, iters, lr_decay, signed_grad=False, save_figure=True, save_interval=10, gif_path="reconstruction.gif"):
         # when taking the SME strategy, alpha is set within (0, 1).
         if 0 < self.alpha < 1:
             self.alpha.grad = torch.tensor(0.).to(self.device)
@@ -99,6 +100,10 @@ class SME:
         # Reconstruction
         _net.eval()
         stats = []
+        images = []  # List to store intermediate images for the GIF
+        with torch.no_grad():
+            img_np = (self.x[0].permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+            images.append(Image.fromarray(img_np)) # Save the initial image
         for i in tqdm(range(iters)):
             optimizer.zero_grad()
             alpha_opti.zero_grad(set_to_none=False)
@@ -143,6 +148,50 @@ class SME:
                 scheduler.step()
                 alpha_scheduler.step()
 
+            if save_figure:
+                # Define dynamic save intervals
+                if i < iters // 10:  # Save more frequently in the first half
+                    current_save_interval = save_interval  # Use the default save_interval
+                else:  # Save less frequently in the second half
+                    current_save_interval = save_interval * 5  # Save every 30 iterations (or adjust as needed)
+
+                # Save the image if the current iteration matches the interval
+                if i % current_save_interval == 0:
+                    with torch.no_grad():
+                        img = self.x * self.std + self.mean  # Denormalize the image
+                        img = img.clamp(0, 1)  # Clamp values to [0, 1]
+                        img_np = (img[0].permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)  # Convert to numpy
+                        images.append(Image.fromarray(img_np))  # Convert to PIL Image
+
+        # Save the GIF
+
+        if save_figure and images:
+            # Duplicate the first frame to make it appear longer
+            num_repeats_first_frame = 10  # Number of times to repeat the first frame
+            num_repeats_per_frame = 3  # Number of times to repeat each of the first 10 frames
+
+            extended_images = []
+
+            # Extend the first image
+            extended_images.extend([images[0]] * num_repeats_first_frame)  # Repeat the first image
+
+            # Extend the first 10 images
+            for img in images[1:10]:  # Loop through the first 10 images (excluding the first)
+                extended_images.extend([img] * num_repeats_per_frame)  # Repeat each image
+
+            # Add the rest of the images without duplication
+
+            # Add the rest of the images without duplication
+            extended_images.extend(images[10:])
+
+            # Save the GIF with the extended frames
+            extended_images[0].save(
+                gif_path,
+                save_all=True,
+                append_images=extended_images[1:],  # Append the rest of the frames
+                duration=100,  # Duration for each frame in milliseconds
+                loop=0  # Infinite loop
+            )
         return self.x, self.data, self.labels
 
             

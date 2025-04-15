@@ -10,7 +10,7 @@ from flwr_datasets.partitioner import Partitioner
 # Other imports
 import numpy as np
 from typing import Union, Sequence
-from datasets import DatasetDict
+from datasets import DatasetDict, load_dataset
 
 class Data:
 
@@ -27,7 +27,12 @@ class Data:
                  normalization_stds: Sequence[float] = (0.247, 0.243, 0.261)
                  ) -> None:
         
+        
+        # Load the dataset and create the path
+        _ = load_dataset(dataset, cache_dir="./data/cached_datasets") # Load the dataset to cache it
         self.dataset = dataset
+        self.dataset_path = r'.\data\cached_datasets' + f'\{dataset}'
+        
         self._batch_size = batch_size  # The batch size for training
         self._val_test_batch_size = int(val_test_batch_size)  # The batch size for validation and testing
         self._partitioner = partitioner 
@@ -72,15 +77,15 @@ class Data:
                 total_data_size = self._partition_size * self._partitioner
 
 
-                self.fds = FederatedDataset(dataset=self.dataset,
-                                       partitioners={"train": self._partitioner},
-                                       seed=self._seed,
-                                       preprocessor=lambda d: self.trim_dataset(d, total_data_size),
-                                       shuffle=False)
+                self.fds = FederatedDataset(dataset=self.dataset_path,
+                                            partitioners={"train": self._partitioner},
+                                            seed=self._seed,
+                                            preprocessor=lambda d: self.trim_dataset(d, total_data_size),
+                                            shuffle=False)
 
         # If partitioner is a Partitioner, this will be passed forward to the FederatedDataset   
         else:
-            self.fds = FederatedDataset(dataset=self.dataset,
+            self.fds = FederatedDataset(dataset=self.dataset_path,
                                         partitioners={"train": self._partitioner},
                                         seed=self._seed,
                                         shuffle=False)

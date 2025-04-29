@@ -3,14 +3,12 @@ This repository contains the code for the **Federated Learning Master's Thesis**
 
 ## Table of Contents  
 - [Installation](#installation)  
-- [Project Structure](#project-structure)  
-- [Getting Started](#getting-started)  
-- [Running Experiments](#running-experiments)  
 - [GPU Acceleration](#gpu-acceleration)  
-- [License](#license)  
+- [Project Structure](#project-structure)   
+- [Running Experiments](#running-experiments)   
 
 ## Installation  
-Python 3.12.9 has been used during development of this repository. It is unclear if the environment can be set up with any other version.
+Python 3.12.9 has been used during development of this repository. We recommend using this version as we cannot guarantee compatability with other distributions.
 
 We strongly recommend using a virtual environment for dependencies. To set it up, run:   
 ```sh  
@@ -32,7 +30,7 @@ If you encounter issues, try:
 pip install --no-cache-dir -r requirements.txt  
 ```  
 
-### GPU Acceleration (Optional)  
+## GPU Acceleration
 For improved performance, CUDA is recommended if GPUs are available.  
 - This project was developed using **CUDA 12.6** on **Windows 10**, but compatibility with other versions has not been tested.  
 
@@ -40,28 +38,23 @@ For improved performance, CUDA is recommended if GPUs are available.
 ```plaintext  
 federated-learning-thesis/  
 ├── data/                       # Holds datasets and the Data class that handles partitioning
-├── experiments/                # Experiment scripts  
-├── src/                        # Source code  
-│   ├── client/                 # Client-side federated learning code  
-│   ├── server/                 # Server-side federated learning code  
-│   ├── utils/                  # Utility functions for data handling, evaluation, etc.  
-│   └── __init__.py             
-├── notebooks/                  # Jupyter notebooks  
-├── logs/                       # Logs for experiments 
-├── results/                    # Experiment results
-└── tests/                      # Unit tests and integration tests  
-    ├── test_client.py          # Tests for client code  
-    ├── test_server.py          # Tests for server code  
-    └── __init__.py  
+├── experiments/                # Experiment scripts where main code is run  
+├── src/                        # Source code
+│   ├── attack/                 # Code for attack methods
+│   ├── metrics/                # Code for metrics
+│   ├── models/                 # The ML-models used
+│   ├── client_app.py           # Client-side federated learning code  
+│   ├── plots.py                # Plots
+│   ├── simulation.py           # Holds the Simulation class which runs federated learning
+│   ├── strategy.py             # Server-side federated learning code  
+│   ├── utils.py                # Utility functions
+│   └── __init__.py             # Module initializer
+├── notebooks/                  # Jupyter notebooks, used mainly for displaying results  
+└── results/                    # Experiment results
 ```  
 
-## Getting Started  
-To get familiar with the repository structure, try running the simple federated learning example, `experiments/tutorial.py` or equivilantly `notebooks/tutorial.ipynb`
-which is an adaption of the the [Get started with Flower](https://flower.ai/docs/framework/tutorial-series-get-started-with-flower-pytorch.html)-tutorial.  
-
-### Running a Basic Example  
-Run the following command to start a basic federated learning setup:  
-```sh  
-python experiments/template/template.py  
-```  
-The results and corresponding configurations for the specific run will be saved in `results/`
+## Running Experiments  
+The source code in `src/` is run through `main.py` files in  `experiments/`.
+- In `experiments/objective_1/main.py` & `experiments/objective_2/main.py`, federated learning is run with the option to store parameters throughout the training cycle. If opted to save, parameteres will be stored in .jsonl-files in `results/` according to their time stamp.
+- In `experiments/objective_3/main.py`, a deep leakage attack can be carried out on the stored parameters.
+- Finally, with `experiments/objective_4/main.py`, restored images from the deep leakage attack can be evaluated.

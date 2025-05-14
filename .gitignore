@@ -177,3 +177,6 @@ cython_debug/
 # Pdf files
 *.pdf
 *.pdfx
+
+# arrow files
+*.arrow

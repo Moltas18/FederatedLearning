@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import torch
 import json
+import numpy as np
 width = 3.3  # Adjust to match \columnwidth
 height = width * 0.75  # Aspect ratio (4:3)
 FIGSIZE = (width, height)
@@ -128,7 +129,7 @@ def plot_run_results(metrics_path: str, config_path: str) -> None:
     '''
     train_loss, val_loss = [], []
     train_acc, val_acc = [], []
-    rounds = []
+    rounds = np.arange(1, 201)  # Assuming 100 rounds
 
     # Read the metrics file
     with open(metrics_path, "r") as f:
@@ -137,36 +138,35 @@ def plot_run_results(metrics_path: str, config_path: str) -> None:
             if "train_loss" in data:
                 train_loss.append(data["train_loss"])
                 train_acc.append(data["train_accuracy"])
-                rounds.append(i + 1)  # Round index starts at 1
-            elif "validation_loss" in data:
+                # rounds.append(i + 1)  # Round index starts at 1
                 val_loss.append(data["validation_loss"])
                 val_acc.append(data["validation_accuracy"])
 
-    # Read the metadata file
-    with open(config_path, "r") as f:
-        config = json.load(f)
-    legend_info = (
-    f"Model: {config['net']}\n"
-    f"Clients: {config['num_clients']}\n"
-    f"Rounds: {config['num_rounds']}\n"
-    f"Epochs: {config['epochs']}\n"
-    f"Batch: {config['batch_size']}"
-   )
+#     # Read the metadata file
+#     with open(config_path, "r") as f:
+#         config = json.load(f)
+#     legend_info = (
+#     f"Model: {config['net']}\n"
+#     f"Clients: {config['num_clients']}\n"
+#     f"Rounds: {config['num_rounds']}\n"
+#     f"Epochs: {config['epochs']}\n"
+#     f"Batch: {config['batch_size']}"
+#    )
     
     # Plot accuracy and loss
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
 
     # Accuracy Plot
-    ax[0].plot(rounds, train_acc, label="Train Accuracy", marker="o", linestyle="-")
-    ax[0].plot(rounds, val_acc, label="Validation Accuracy", marker="s", linestyle="--")
+    ax[0].plot(rounds, train_acc, label="Train Accuracy", linestyle="-")
+    ax[0].plot(rounds, val_acc, label="Validation Accuracy", linestyle="-")
     ax[0].set_title("Training & Validation Accuracy per Round")
     ax[0].set_xlabel("Rounds")
     ax[0].set_ylabel("Accuracy")
     ax[0].legend()
 
     # Loss Plot
-    ax[1].plot(rounds, train_loss, label="Train Loss", marker="o", linestyle="-")
-    ax[1].plot(rounds, val_loss, label="Validation Loss", marker="s", linestyle="--")
+    ax[1].plot(rounds, train_loss, label="Train Loss", linestyle="-")
+    ax[1].plot(rounds, val_loss, label="Validation Loss", linestyle="-")
     ax[1].set_title("Training & Validation Loss per Round")
     ax[1].set_xlabel("Rounds")
     ax[1].set_ylabel("Loss")

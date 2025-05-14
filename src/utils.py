@@ -18,6 +18,7 @@ from time import time
 import json
 from tqdm import tqdm
 import random
+from src.metrics.metrics import SSIM, LPIPS, PSNR
 
 
 def timer(func):
@@ -299,6 +300,52 @@ def parse_run(run_path: Union[str, Path]) -> pd.DataFrame:
     df['Normalization Stds'] = [data_config['normalization_stds']] * len(df)
     return df
 
+
+def parse_attack(reconstructions_path: Union[str, Path], perform_mertrics_computation: bool = True) -> pd.DataFrame:
+    """
+    Parse an attack directory and return a DataFrame with the attack data.
+
+    Args:
+        reconstructions_path (Union[str, Path]): The path to the attack directory.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the parsed attack data.
+    """
+    
+    reconstructions_files = get_filenames(reconstructions_path)
+
+    df_dict = {
+        'server_round' : [],
+        'client_id' : [],
+        # 'epochs' :  [],
+        'batch_size' : [],
+        'num_batches' : [],
+        'predicted_images' : [],
+        'true_images' : []
+    }
+
+    # Loop through all of the parameter files
+    for reconstructions_file in tqdm(reconstructions_files, desc="Processing Reconstruction files"):
+        client_reconstruction = read_from_file(reconstructions_path + reconstructions_file) # Not sure this works!
+        for round in client_reconstruction:            
+            df_dict['batch_size'].append(round['run_info']['batch_size'])
+            df_dict['server_round'].append(round['run_info']['server_round'])
+            # df_dict['epochs'].append(1.0)
+            df_dict['client_id'].append(round['run_info']['client_id'])
+            df_dict['num_batches'].append(round['run_info']['num_batches'])
+            df_dict['predicted_images'].append(torch.Tensor(round['reconstruction']['predicted_images']))
+            df_dict['true_images'].append(torch.Tensor(round['reconstruction']['true_images']))
+
+    # Create the dataframe        
+    df = pd.DataFrame(df_dict)
+
+    if perform_mertrics_computation:
+        # Compute the metrics
+        df['psnr'] = df.apply(lambda x: PSNR(x['predicted_images'], x['true_images']), axis=1)
+        df['ssim'] = df.apply(lambda x: SSIM(x['predicted_images'], x['true_images']), axis=1)
+        df['lpips'] = df.apply(lambda x: LPIPS(x['predicted_images'], x['true_images']), axis=1)
+
+    return df 
 
 def denormalize(img: torch.Tensor, means: Sequence[float], stds: Sequence[float]) -> torch.Tensor:
     """

@@ -29,14 +29,9 @@ class SME:
         # Initialize instances of the models, could be done in other ways
         self.net0 = net().to(self.device)
         self.net1 = net().to(self.device)
-        
-        # self.test_steps = test_steps
-        # os.makedirs(path_to_res, exist_ok=True)
-
 
         # self.path = path_to_res
         self.lamb = lamb
-
 
         self.dataset = dataset
         data, labels = [], []
@@ -144,28 +139,3 @@ class SME:
                 alpha_scheduler.step()
 
         return self.x, self.data, self.labels
-
-            
-
-
-        #     if i % self.test_steps == 0 or i == iters - 1:
-        #         with torch.no_grad():
-        #             _x = self.x * self.std + self.mean
-        #             _data = self.data * self.std + self.mean
-        #         measurement = psnr(_data, _x, sort=True)
-        #         print(f"iter: {i}| alpha: {self.alpha.item():.2f}| (1 - cos): {cos_loss.item():.3f}| "
-        #               f"psnr: {measurement:.3f}")
-        #         stats.append({
-        #             "iter": i,
-        #             "alpha": self.alpha.item(),
-        #             "cos_loss": cos_loss.item(),
-        #             "psnr": measurement,
-        #         })
-        #         if save_figure:
-        #             save_figs(tensors=_x, path=self.path, subdir=str(i), dataset=self.dataset)
-        # if save_figure:
-        #     save_figs(tensors=self.data * self.std + self.mean,
-        #               path=self.path, subdir="original", dataset=self.dataset)
-        # return stats
-    
-

@@ -10,8 +10,8 @@ if __name__ == '__main__':
     # Import local modules
     from src.simulation import Simulation
     from src.models.CNNcifar import CNNcifar
-    from src.models.LeNet5 import LeNet5
-    from src.utils import fit_weighted_average, eval_weighted_average, plot_run_results, set_global_seed
+    from src.utils import fit_weighted_average, eval_weighted_average, set_global_seed
+    from src.plots import plot_run_results
     from data.data import Data
     from src.strategy import CustomFedAvg
 

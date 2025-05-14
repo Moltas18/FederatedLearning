@@ -15,6 +15,7 @@ if __name__ == '__main__':
     from src.simulation import Simulation
     from src.models.CNNcifar import CNNcifar
     from src.utils import fit_weighted_average, eval_weighted_average, set_global_seed
+    from src.plots import plot_run_results
     from data.data import Data
     from src.strategy import CustomFedAvg
 
@@ -23,32 +24,31 @@ if __name__ == '__main__':
     set_global_seed(seed=seed)
     
     ### Configurations
-
     # Federated learning configurations
-    num_clients = 1
-    num_rounds = 1
+    num_clients = 1000
+    num_rounds = 100
 
     # Model configurations
-    epochs = 20
+    epochs = 1
     net = CNNcifar()
     optimizer = torch.optim.SGD
-    lr = 0.004
+    lr = 0.01
     criterion = torch.nn.CrossEntropyLoss()
 
     # Data configurations
     partitioner = num_clients # Number of partitions to make, should almost always be kept this way!
-    batch_size = 10
-    val_size = 0.5 # 50% of the data is used for validation
-    training_partition_size = 50 # This is the size of the full datasets which the clients will TRAIN on.
-    partition_size = training_partition_size*2 # Trains on half of the images and validates on the other half.
-    
+    batch_size = 16
+    val_size = 0.5 # 20% of the data is used for validation
+    training_partition_size = 64 # This is the size of the full datasets which the clients will TRAIN on.
+    partition_size = int(training_partition_size/(1-val_size)) # Trains on half of the images and validates on the other half.
+
     # General configurations
     num_gpus = 1/num_clients
     num_cpus = 1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # Save parameters
-    save_parameters = True
+    save_parameters = False
 
     # Fit config function. Mainly used to save parameters
     def fit_config(server_round: int) -> dict:
@@ -88,4 +88,8 @@ if __name__ == '__main__':
                      )
 
     run_path = sim.run_simulation()
-    print(run_path)
+    
+    config_path = run_path /  'run_config.jsonl'
+    metrics_path = run_path / 'metrics.jsonl'
+
+    plot_run_results(metrics_path, config_path)

@@ -1,6 +1,7 @@
 '''
-This file is the template upon which simulations can be build
+This file is the template upon which simulations can be built.
 '''
+
 from typing import Type, Union
 from datetime import datetime
 from pathlib import Path
@@ -20,7 +21,10 @@ from src.client_app import FlowerClient, get_parameters, set_parameters
 from data.data import Data
 
 class Simulation:
-    
+    """
+    A class to manage and run federated learning simulations using Flower.
+    """
+
     def __init__(self,
                  net: torch.nn.Module,
                  data: Data, 
@@ -31,21 +35,37 @@ class Simulation:
                  num_cpus: int = 1,
                  num_gpus: int = 1,
                  strategy: Strategy = FedAvg(),
-                 criterion = None,
-                 optim_method = None,
+                 criterion=None,
+                 optim_method=None,
                  lr: float = 0.001,
                  ) -> None:
-        
+        """
+        Initialize the simulation with the given parameters.
+
+        Args:
+            net (torch.nn.Module): The neural network model to be used.
+            data (Data): The dataset object for partitioning and loading data.
+            num_clients (int): Number of clients in the simulation.
+            num_rounds (int): Number of federated learning rounds.
+            epochs (int): Number of local training epochs per client.
+            device (str): Device to use ('cuda' or 'cpu').
+            num_cpus (int): Number of CPUs to allocate per client.
+            num_gpus (int): Number of GPUs to allocate per client.
+            strategy (Strategy): Federated learning strategy (default: FedAvg).
+            criterion: Loss function (default: CrossEntropyLoss).
+            optim_method: Optimizer method (default: Adam).
+            lr (float): Learning rate for the optimizer.
+        """
         # Model
         self._net = net
 
-        # We save the original parameters if needed later
+        # Save the original parameters for resetting the model
         self._orgininal_parameters = [np.copy(param) for param in get_parameters(self._net)]
 
-        # Ensure criterion is properly initialized
+        # Initialize loss function
         self._criterion = criterion if criterion else torch.nn.CrossEntropyLoss()
 
-        # Ensure optimizer is properly initialized
+        # Initialize optimizer
         self._optim_method = optim_method if optim_method else torch.optim.Adam
         self._optimizer = self._optim_method(self._net.parameters(), lr=lr)
 
@@ -65,78 +85,93 @@ class Simulation:
         # Save data to class
         self._data = data
 
-        # Controlling functions
+        # Validate hardware and strategy
         self.check_hardware(self._device)
         self.check_strategy(self._strategy, self._num_clients)
 
-        # Initialization functions
+        # Backend configuration and run directory setup
         self._set_backend_config()
         self.save_path, self.run_dir = self.create_run_dir()
 
     def reset_net(self) -> None:
-        # Reset the network parameters
+        """
+        Reset the network parameters to their original state and reinitialize the optimizer.
+        """
         set_parameters(self._net, self._orgininal_parameters)  # Ensure this updates in-place
-
-        # Reinitialize the optimizer to reset its state
         self._optimizer = self._optim_method(self._net.parameters())
-        
+
     def _set_backend_config(self) -> None:
+        """
+        Configure the backend resources for the simulation.
+        """
         if self._device == "cuda":
             self._backend_config = {"client_resources": {"num_cpus": self._num_cpus, "num_gpus": self._num_gpus}}
         else:
             self._backend_config = {"client_resources": {"num_cpus": self._num_cpus, "num_gpus": 0.0}}
 
     def client_fn(self, context: Context) -> Client:
-            """Create a Flower client representing a single organization."""
+        """
+        Create a Flower client representing a single organization.
 
-            # Load model
-            net = self._net.to(self._device)
-            partition_id = context.node_config["partition-id"]
-            trainloader, valloader, _ = self._data.load_datasets(partition_id=partition_id)
+        Args:
+            context (Context): Context object containing client-specific configurations.
 
-            return FlowerClient(net,
-                                trainloader,
-                                valloader,
-                                self._epochs,
-                                self._device,
-                                self._criterion,
-                                self._optimizer,
-                                self.save_path,
-                                context,
-                                ).to_client()
+        Returns:
+            Client: A Flower client instance.
+        """
+        # Load model and partition data
+        net = self._net.to(self._device)
+        partition_id = context.node_config["partition-id"]
+        trainloader, valloader, _ = self._data.load_datasets(partition_id=partition_id)
+
+        return FlowerClient(
+            net=net,
+            trainloader=trainloader,
+            valloader=valloader,
+            epochs=self._epochs,
+            device=self._device,
+            criterion=self._criterion,
+            optimizer=self._optimizer,
+            save_path=self.save_path,
+            context=context,
+        ).to_client()
 
     def server_fn(self, context: Context) -> ServerAppComponents:
+        """
+        Create a Flower server with the specified strategy and configuration.
 
-        # Configure the server for 5 rounds of training
+        Args:
+            context (Context): Context object containing server-specific configurations.
+
+        Returns:
+            ServerAppComponents: The server components for the simulation.
+        """
         config = ServerConfig(num_rounds=self._num_rounds)
-
         return ServerAppComponents(strategy=self._strategy, config=config)
-    
+
     @timer
     def run_simulation(self) -> Path:
-        '''Run the simulation'''
+        """
+        Run the federated learning simulation.
 
-        # Create a directory to save results and configs to!
+        Returns:
+            Path: The path where the simulation results are saved.
+        """
+        # Save configuration files
         config_dict = self.get_config_dict()
-        write_to_file(data=config_dict,
-                      path=self.save_path,
-                      filename='run_config')
+        write_to_file(data=config_dict, path=self.save_path, filename='run_config')
         
         data_dict = self._data.get_config_dict()
-        write_to_file(data=data_dict,
-                      path=self.save_path,
-                      filename='data_config')
+        write_to_file(data=data_dict, path=self.save_path, filename='data_config')
         
-        # Add the path to the strategy
+        # Add the save path to the strategy
         self._strategy.save_path = self.save_path
 
-        # Create the ClientApp
+        # Create the ClientApp and ServerApp
         client = ClientApp(client_fn=self.client_fn)
-        # Create the ServerApp
         server = ServerApp(server_fn=self.server_fn)
 
-        # Run simulation
-
+        # Run the simulation
         run_simulation(
             server_app=server,
             client_app=client,
@@ -146,42 +181,67 @@ class Simulation:
         )
 
         return self.save_path
-    
-    def get_config_dict(self):
-        config_dict = {
-                'net': self._net.__class__.__name__,
-                'data': self._data.dataset, 
-                'num_clients': self._num_clients,
-                'num_rounds': self._num_rounds,
-                'epochs': self._epochs,
-                'batch_size' : self._data._batch_size,
-                'device': self._device,
-                'num_cpus': self._num_cpus,
-                'num_gpus': self._num_gpus,
-                'strategy': self.__class__.__name__,
-                'criterion': self._criterion.__class__.__name__,
-                'optim_method': self._optimizer.__class__.__name__,
-                'learning_rate': self._optimizer.param_groups[0]['lr']}
-        return config_dict
+
+    def get_config_dict(self) -> dict:
+        """
+        Generate a dictionary containing the simulation configuration.
+
+        Returns:
+            dict: The simulation configuration.
+        """
+        return {
+            'net': self._net.__class__.__name__,
+            'data': self._data.dataset, 
+            'num_clients': self._num_clients,
+            'num_rounds': self._num_rounds,
+            'epochs': self._epochs,
+            'batch_size': self._data._batch_size,
+            'device': self._device,
+            'num_cpus': self._num_cpus,
+            'num_gpus': self._num_gpus,
+            'strategy': self.__class__.__name__,
+            'criterion': self._criterion.__class__.__name__,
+            'optim_method': self._optimizer.__class__.__name__,
+            'learning_rate': self._optimizer.param_groups[0]['lr']
+        }
 
     @staticmethod
-    def create_run_dir():
-        """Create a directory where to save results from this run."""
-        # Create output directory given current timestamp
+    def create_run_dir() -> tuple:
+        """
+        Create a directory to save results from this run.
+
+        Returns:
+            tuple: The save path and run directory.
+        """
         current_time = datetime.now()
         run_dir = current_time.strftime("%Y-%m-%d/%H-%M-%S")
-        # Save path is based on the current directory
         save_path = Path.cwd() / f"results/{run_dir}"
         save_path.mkdir(parents=True, exist_ok=False)
         return save_path, run_dir
 
     @staticmethod
     def check_hardware(device: str) -> None:
+        """
+        Check the hardware configuration and print device information.
+
+        Args:
+            device (str): The device to use ('cuda' or 'cpu').
+        """
         prompt = f'Using device: {device}\nDevice name: {torch.cuda.get_device_name(device)}\nFlower {flwr.__version__} / PyTorch {torch.__version__}'
         print(prompt)
 
     @staticmethod
     def check_strategy(strategy: Strategy, num_clients: int) -> None:
+        """
+        Validate the strategy configuration.
+
+        Args:
+            strategy (Strategy): The federated learning strategy.
+            num_clients (int): The number of clients in the simulation.
+
+        Raises:
+            ValueError: If the number of clients is less than the minimum required by the strategy.
+        """
         if strategy.min_available_clients > num_clients:    
             raise ValueError(
                 "The number of clients must be greater than the minimum number of clients required to start a round!"
